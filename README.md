@@ -16,9 +16,11 @@ A `.egg` is a portable digital twin: a zip cartridge containing a `rappid.json` 
 # 1. Install the brainstem (the static-ancestor substrate)
 curl -fsSL https://kody-w.github.io/rapp-installer/install.sh | bash
 
-# 2. Drop the Twin agent cartridge in (one curl)
-curl -fsSL https://raw.githubusercontent.com/kody-w/RAR/main/agents/@kody-w/twin_agent.py \
+# 2. Drop in the agent cartridges — Twin (lifecycle) + Estate (monitoring)
+curl -fsSL https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/agents/twin_agent.py \
      -o ~/.brainstem/src/rapp_brainstem/agents/twin_agent.py
+curl -fsSL https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/agents/estate_agent.py \
+     -o ~/.brainstem/src/rapp_brainstem/agents/estate_agent.py
 
 # 3. Boot the brainstem
 bash ~/.brainstem/src/rapp_brainstem/start.sh
@@ -28,7 +30,24 @@ Then in the chat at <http://127.0.0.1:7071/>:
 
 > *"Hatch the egg at https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/grandma-rose.egg, then boot her."*
 
-That's it. The Twin cartridge fetches the egg, materializes the workspace at `~/.rapp/twins/<rappid>/`, boots a second brainstem on a fresh port pointed at her soul, and gives you the URL to chat with her. **Same rappid as wherever the egg was packed**; identity, memory, and mutations preserved.
+The Twin cartridge fetches the egg, sha256-verifies against the published sidecar, materializes the workspace at `~/.rapp/twins/<rappid>/`, boots a second brainstem on a fresh port pointed at her soul, and gives you the URL to chat with her. **Same rappid as wherever the egg was packed**; identity, memory, and mutations preserved.
+
+Use `Estate` to monitor what's running:
+
+> *"What twins do I have? Show me their status."*
+
+The Estate cartridge reports running/stopped, soul-edit history, egg backups, and the family tree.
+
+## Agents bundled in this hub
+
+Two single-file cartridges live alongside the eggs — pull them as part of any hub install:
+
+| File | Tool name | What it does |
+|---|---|---|
+| [`agents/twin_agent.py`](./agents/twin_agent.py) | **Twin** | Full lifecycle — `summon`, `hatch` (local file or URL), `boot`, `stop`, `list`, `update_identity`, `update_soul` (with timestamped soul history backups), `lay_egg` (pack a twin you own → sha256-stamped sidecar ready to PR back here). |
+| [`agents/estate_agent.py`](./agents/estate_agent.py) | **Estate** | Read-only monitoring — `overview`, `inspect <rappid>`, `history` (soul edit timeline), `eggs` (every backup on disk), `lineage` (parent_rappid family tree). |
+
+Both also live at [`kody-w/RAR`](https://github.com/kody-w/RAR/tree/main/agents/@kody-w) for cross-referencing with the broader RAR catalog.
 
 ## Layout
 

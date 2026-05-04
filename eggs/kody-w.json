@@ -6,19 +6,20 @@
   "display_name": "Kody Wildfeuer",
   "github": "https://github.com/kody-w",
   "kind": "personal",
-  "description": "Public-facing digital twin of @kody-w (Kody Wildfeuer). Built from his open-source manifestos, RAPP constitution, Wildhaven manifest, and architecture notes. The voice and convictions he projects through his public work \u2014 not Kody himself.",
+  "description": "Public-facing digital twin of @kody-w (Kody Wildfeuer). Built from his open-source manifestos. Bundles the standard ManageMemory + ContextMemory cartridges. Optional private memory escalation via kody-w/kody-w-twin-private (GitHub auth required).",
   "tags": [
     "personal",
     "founder",
     "kody-w",
     "rapp",
-    "wildhaven"
+    "wildhaven",
+    "memory-equipped"
   ],
   "egg_schema": "brainstem-egg/2.1",
-  "size_bytes": 6132,
-  "sha256": "d03383b26ff6f28fd00576bcdadb20793a12285c30d21bb9f5e75a7aa4252565",
+  "size_bytes": 10401,
+  "sha256": "d5802147d89be7b5e1f5abcbb2632390f56a1b90b6244aa7f9078fbb69fa72e4",
   "packed_by": "@kody-w",
-  "packed_at": "2026-05-04T17:06:16Z",
+  "packed_at": "2026-05-04T17:09:16Z",
   "egg_path": "eggs/kody-w.egg",
   "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/kody-w.egg",
   "lineage": {
