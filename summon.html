@@ -1761,18 +1761,50 @@
       // close-button in the overlay markup can call it. Same shape as the
       // local brainstem's openRappFrame/closeRappFrame so a user moving
       // between pages sees identical behavior.
-      window.openRappFrame = function(id, name, url) {
+      // Rapplications are cartridges loaded into the iframe player. To get
+      // around X-Frame-Options / CSP frame-ancestors blocks (which are why a
+      // raw `iframe.src = url` to e.g. another GitHub Pages origin renders
+      // blank), fetch the HTML and inject it via `srcdoc` so it executes as
+      // a sandboxed same-origin document. Relative asset paths are resolved
+      // back to the source origin via an injected <base> tag.
+      window.openRappFrame = async function(id, name, url) {
         document.getElementById('rf-name').textContent = name || id;
         document.getElementById('rf-id').textContent = id ? `· ${id}` : '';
-        document.getElementById('rf-iframe').src = url;
+        const iframe = document.getElementById('rf-iframe');
         document.getElementById('rapp-frame').classList.add('open');
-        // Close any open aside so the iframe is fully visible.
         document.querySelectorAll('aside.open').forEach(a => a.classList.remove('open'));
+        if (!url) { iframe.removeAttribute('srcdoc'); iframe.src = 'about:blank'; return; }
+        // Show a loading splash inside the iframe immediately.
+        iframe.removeAttribute('src');
+        iframe.srcdoc = `<html><body style="margin:0;background:#0d1117;color:#8b949e;font:14px -apple-system,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh">Loading ${escapeHtml(name || id || 'rapp')}…</body></html>`;
+        try {
+          const r = await fetch(url, { cache: 'no-cache' });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          let html = await r.text();
+          // Inject <base href="…/"> so the cartridge's relative <script src=…>,
+          // <link href=…>, fetch(), etc. resolve back to the source origin.
+          // Insert into <head> if present, otherwise at the very top.
+          const baseHref = url.replace(/[^/]*(?:\?|#|$).*$/, '');
+          const baseTag = `<base href="${baseHref}">`;
+          if (/<head[^>]*>/i.test(html)) {
+            html = html.replace(/<head([^>]*)>/i, `<head$1>\n  ${baseTag}`);
+          } else if (/<html[^>]*>/i.test(html)) {
+            html = html.replace(/<html([^>]*)>/i, `<html$1><head>${baseTag}</head>`);
+          } else {
+            html = `<!doctype html><html><head>${baseTag}</head><body>${html}</body></html>`;
+          }
+          iframe.srcdoc = html;
+        } catch (e) {
+          iframe.srcdoc = `<html><body style="margin:0;background:#0d1117;color:#f85149;font:14px -apple-system,sans-serif;padding:24px"><h2 style="margin:0 0 12px">Couldn't load ${escapeHtml(name || id || 'rapp')}</h2><p>${escapeHtml(e.message)}</p><p style="color:#8b949e;font-size:12px;margin-top:24px">Source: <code>${escapeHtml(url)}</code></p></body></html>`;
+        }
       };
       window.closeRappFrame = function() {
         document.getElementById('rapp-frame').classList.remove('open');
-        document.getElementById('rf-iframe').src = 'about:blank';
+        const iframe = document.getElementById('rf-iframe');
+        iframe.removeAttribute('srcdoc');
+        iframe.src = 'about:blank';
       };
+      function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
       document.addEventListener('keydown', e => {
         if (e.key === 'Escape' && document.getElementById('rapp-frame')?.classList.contains('open')) {
           window.closeRappFrame();
@@ -2140,10 +2172,19 @@
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 
+// Starter agents pulled from RAR (the canonical agent registry) by absolute
+// URL — the original `../agents/<f>` path 404s when summon.html is hosted
+// outside the RAPP repo, dropping HTML into Pyodide and crashing on import.
+// File names match the RAR sources so manifest.name resolves cleanly.
 const STARTER_AGENT_FILES = [
-  'save_memory_agent.py', 'recall_memory_agent.py', 'hacker_news_agent.py'
+  'manage_memory_agent.py', 'context_memory_agent.py', 'hacker_news_agent.py'
 ];
-const STARTER_VERSION = 'v2';   // bump to force-rehydrate the binder for existing users
+const STARTER_URLS = {
+  'manage_memory_agent.py':  'https://raw.githubusercontent.com/kody-w/RAR/main/agents/@kody/manage_memory_agent.py',
+  'context_memory_agent.py': 'https://raw.githubusercontent.com/kody-w/RAR/main/agents/@kody/context_memory_agent.py',
+  'hacker_news_agent.py':    'https://raw.githubusercontent.com/kody-w/RAR/main/agents/@rapp/hacker_news_agent.py',
+};
+const STARTER_VERSION = 'v3-rar';   // bump to force-rehydrate the binder for existing users
 
 /* ───── State ─────────────────────────────────────────────────── */
 // Same OAuth + worker the canonical RAR virtual brainstem uses.
@@ -3078,7 +3119,13 @@ async function bootBinder() {
     state.binder = RAPP.Binder.empty('@local/you');
     for (const f of STARTER_AGENT_FILES) {
       try {
-        const src = await (await fetch(`../agents/${f}`)).text();
+        const url = STARTER_URLS[f] || `../agents/${f}`;
+        const r = await fetch(url, { cache: 'no-cache' });
+        if (!r.ok) throw new Error(`HTTP ${r.status} fetching ${url}`);
+        const src = await r.text();
+        // Sanity check: GitHub Pages 404s return HTML — refuse to mint a card
+        // from non-Python content, which would later blow up Pyodide on import.
+        if (/^\s*<!doctype html|^\s*<html/i.test(src)) throw new Error(`got HTML, not Python, from ${url}`);
         const c = await RAPP.Card.mintCard(src, f);
         RAPP.Binder.addCard(state.binder, c);
       } catch (e) {
@@ -3144,9 +3191,12 @@ function cardElement(c) {
 // the bundled starters in case an agent ships without one, then to a
 // generic "use this tool" line.
 const HAND_PROMPTS = {
-  'hacker_news_agent.py':    'What are the top 5 stories on Hacker News right now?',
-  'save_memory_agent.py':    'Remember that I prefer concise responses.',
-  'recall_memory_agent.py':  'What do you remember about me?',
+  'hacker_news_agent.py':     'What are the top 5 stories on Hacker News right now?',
+  'manage_memory_agent.py':   'Remember that I prefer concise responses.',
+  'context_memory_agent.py':  'What do you remember about me?',
+  // Legacy filenames kept for users with stale binders pinned at v2.
+  'save_memory_agent.py':     'Remember that I prefer concise responses.',
+  'recall_memory_agent.py':   'What do you remember about me?',
 };
 
 function promptForCard(c) {
