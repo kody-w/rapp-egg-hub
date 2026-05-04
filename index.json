@@ -4,7 +4,7 @@
   "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-05-04T17:04:37Z",
+  "updated_at": "2026-05-04T17:06:34Z",
   "egg_count": 2,
   "eggs": [
     {
@@ -35,27 +35,26 @@
     },
     {
       "schema": "rapp-egg-hub-entry/1.0",
-      "slug": "kody-wildfeuer",
+      "slug": "kody-w",
       "rappid_uuid": "1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f",
-      "name": "kody-wildfeuer",
+      "name": "kody-w",
       "display_name": "Kody Wildfeuer",
       "kind": "personal",
-      "description": "Public-facing digital twin of Kody Wildfeuer (@kody-w). Built from his open-source manifestos, RAPP constitution, Wildhaven manifest, and architecture notes. The voice and convictions he projects through his public work \u2014 not Kody himself.",
+      "description": "Public-facing digital twin of @kody-w (Kody Wildfeuer). Built from his open-source manifestos, RAPP constitution, Wildhaven manifest, and architecture notes. The voice and convictions he projects through his public work \u2014 not Kody himself.",
       "tags": [
         "personal",
         "founder",
+        "kody-w",
         "rapp",
-        "wildhaven",
-        "self",
-        "kody"
+        "wildhaven"
       ],
       "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 6455,
-      "sha256": "1c0de3d19d21d456d027fd7a8bb8ab8c13eb3ec3c23c030943d3d0f06e464045",
+      "size_bytes": 6132,
+      "sha256": "d03383b26ff6f28fd00576bcdadb20793a12285c30d21bb9f5e75a7aa4252565",
       "packed_by": "@kody-w",
-      "packed_at": "2026-05-04T17:04:02Z",
-      "egg_path": "eggs/kody-wildfeuer.egg",
-      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/kody-wildfeuer.egg",
+      "packed_at": "2026-05-04T17:06:16Z",
+      "egg_path": "eggs/kody-w.egg",
+      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/kody-w.egg",
       "lineage": {
         "parent_rappid": "37ad22f5-ed6d-48b1-b8b4-61019f58a42b",
         "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
