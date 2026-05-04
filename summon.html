@@ -528,6 +528,10 @@
     max-width: 760px; margin: 0 auto 8px;
     pointer-events: none;
   }
+  /* When a twin is summoned, hide the auto-generated per-agent pills.
+     The 3 canonical starter prompts (Remember/What do/HN) stay visible
+     above this row. Twin's agents remain callable through the LLM tool layer. */
+  body[data-twin-summoned] #hand-cards { display: none !important; }
   /* Card mode rebuilds the layout: absolute, fanned, tucked behind input. */
   #hand-cards[data-mode="cards"] {
     position: absolute;
@@ -1805,7 +1809,7 @@
       <button class="btn primary" id="import-card">Import card.json</button>
       <button class="btn" id="import-binder">Import binder.json</button>
       <button class="btn" id="export-binder">Export binder</button>
-      <button class="btn" id="export-egg" title="Pack current twin (soul + binder + memory) into a portable .egg cartridge">📦 Export .egg</button>
+      <button class="btn" id="export-egg" title="Pack current twin (soul + agents + memory) into a portable .egg backup">📦 Export .egg</button>
       <button class="btn" id="import-egg" title="Restore a twin from a local .egg backup">📥 Import .egg</button>
       <input type="file" id="file-card" accept=".json,application/json" hidden />
       <input type="file" id="file-binder" accept=".json,application/json" hidden />
@@ -5142,8 +5146,13 @@ async function ensurePyodide() {
       document.head.appendChild(s);
       await new Promise(r => s.onload = r);
       state.pyodide = await window.loadPyodide();
-      // Inject the BasicAgent shim — no Azure deps, no openrappter package.
-      const basic = await (await fetch('../agents/basic_agent.py')).text();
+      // Inject the BasicAgent shim. Fetched via absolute URL because the
+      // relative path '../agents/basic_agent.py' resolves to the wrong place
+      // when summon.html is hosted outside the canonical
+      // kody-w.github.io/RAPP/rapp_brainstem/utils/web/ tree (e.g. on
+      // rapp-egg-hub) — there it would 404 with the github.io HTML page,
+      // which Pyodide then tries to parse as Python and chokes on the CSS.
+      const basic = await (await fetch('https://kody-w.github.io/RAPP/rapp_brainstem/agents/basic_agent.py')).text();
       state.pyodide.FS.mkdirTree('/agents');
       state.pyodide.FS.writeFile('/agents/basic_agent.py', basic);
       state.pyodide.FS.writeFile('/agents/__init__.py', '');
@@ -5945,7 +5954,7 @@ function renderSummonBanner() {
   b.innerHTML = `
     <span style="font-size:16px">${kindIcon}</span>
     <span>Chatting as <strong>${escapeHtml(summonedTwin.display_name)}</strong></span>
-    <span style="opacity:0.6;font-weight:400">· soul as persona${summonedTwin.bundledCount ? ' · ' + summonedTwin.bundledCount + ' cartridge' + (summonedTwin.bundledCount===1?'':'s') : ''}</span>
+    <span style="opacity:0.6;font-weight:400">· soul as persona${summonedTwin.bundledCount ? ' · ' + summonedTwin.bundledCount + ' agent' + (summonedTwin.bundledCount===1?'':'s') : ''}</span>
     <span style="margin-left:auto;display:flex;gap:6px">
       <a href="javascript:void(exportTwinEgg())" style="color:#58a6ff;text-decoration:none;font-weight:400" title="Download .egg backup">⤓ backup</a>
       <a href="javascript:void(unsummonTwin())" style="color:#8b949e;text-decoration:none;font-weight:400" title="Clear twin persona">unsummon</a>
@@ -5960,10 +5969,8 @@ function escapeHtml(s) {
 window.unsummonTwin = function() {
   summonedTwin = null;
   localStorage.removeItem('summoned_twin');
+  document.body.removeAttribute('data-twin-summoned');
   renderSummonBanner();
-  // Show the hand-pill row again so per-cartridge prompts return.
-  const hand = document.getElementById('hand-cards');
-  if (hand) hand.style.display = '';
   showEggToast('Twin unsummoned · back to generic brainstem');
 };
 
@@ -6043,11 +6050,9 @@ async function ingestEggBuffer(buf, sourceLabel) {
   if (typeof renderBinder === 'function') renderBinder();
   if (typeof renderHand === 'function') renderHand();
   if (typeof renderAgents === 'function') renderAgents();
-  // Hide the per-cartridge hand pills — keep the canonical 3 starter prompts
-  // (Remember / What do you remember / HN) as the only quick-click starters.
-  // The twin's cartridges remain callable via the LLM tool layer.
-  const handPills = document.getElementById('hand-cards');
-  if (handPills) handPills.style.display = 'none';
+  // Mark the body so CSS hides the auto-generated hand-pill row. The 3
+  // canonical starter prompts above remain the only quick-click pills.
+  document.body.setAttribute('data-twin-summoned', '');
 
   summonedTwin = {
     name: rappid.name || manifest.source?.name || 'twin',
@@ -6057,7 +6062,7 @@ async function ingestEggBuffer(buf, sourceLabel) {
   };
   try { localStorage.setItem('summoned_twin', JSON.stringify(summonedTwin)); } catch (_) {}
   renderSummonBanner();
-  showEggToast(`Summoned ${summonedTwin.display_name} · ${bundledCount} cartridge${bundledCount===1?'':'s'} loaded`);
+  showEggToast(`Summoned ${summonedTwin.display_name} · ${bundledCount} agent${bundledCount===1?'':'s'} loaded`);
 }
 
 async function applyEggDeepLink() {
@@ -6215,14 +6220,11 @@ window.importTwinEgg = importTwinEgg;
     }
     persistHand(); renderHand(); renderBinder(); renderAgents();
   }
-  // When a twin is summoned, hide the per-cartridge hand pills ("Use the X
-  // tool.") — they're noise. Keep the canonical 3 starter prompts (Remember /
-  // What do you remember / HN) as the only quick-click starters; the twin's
-  // cartridges remain callable as tools via the LLM, just not as pills.
-  if (summonedTwin) {
-    const hand = document.getElementById('hand-cards');
-    if (hand) hand.style.display = 'none';
-  }
+  // When a twin is summoned (either freshly via ?egg= or restored from
+  // localStorage), mark the body so the per-agent hand-pill CSS rule kicks in.
+  // The 3 canonical starter prompts (Remember / What do / HN) remain the only
+  // quick-click pills; agents stay callable through the LLM tool layer.
+  if (summonedTwin) document.body.setAttribute('data-twin-summoned', '');
   wire();
   installHeadlessConsoleApi();
   wireMicButton();
