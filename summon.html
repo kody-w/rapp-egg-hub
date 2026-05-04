@@ -5961,9 +5961,9 @@ window.unsummonTwin = function() {
   summonedTwin = null;
   localStorage.removeItem('summoned_twin');
   renderSummonBanner();
-  // Restore the generic starter pill row — there's no twin to override it now.
-  const sp = document.getElementById('starter-prompts');
-  if (sp) sp.classList.remove('hidden');
+  // Show the hand-pill row again so per-cartridge prompts return.
+  const hand = document.getElementById('hand-cards');
+  if (hand) hand.style.display = '';
   showEggToast('Twin unsummoned · back to generic brainstem');
 };
 
@@ -6043,9 +6043,11 @@ async function ingestEggBuffer(buf, sourceLabel) {
   if (typeof renderBinder === 'function') renderBinder();
   if (typeof renderHand === 'function') renderHand();
   if (typeof renderAgents === 'function') renderAgents();
-  // Hide the static starter-prompts row — twin's bundled hand pills replace it.
-  const sp = document.getElementById('starter-prompts');
-  if (sp) sp.classList.add('hidden');
+  // Hide the per-cartridge hand pills — keep the canonical 3 starter prompts
+  // (Remember / What do you remember / HN) as the only quick-click starters.
+  // The twin's cartridges remain callable via the LLM tool layer.
+  const handPills = document.getElementById('hand-cards');
+  if (handPills) handPills.style.display = 'none';
 
   summonedTwin = {
     name: rappid.name || manifest.source?.name || 'twin',
@@ -6213,11 +6215,13 @@ window.importTwinEgg = importTwinEgg;
     }
     persistHand(); renderHand(); renderBinder(); renderAgents();
   }
-  // Hide the static starter-prompts row when a twin is summoned — the twin's
-  // bundled hand pills are what the user should see, not generic memory/HN.
+  // When a twin is summoned, hide the per-cartridge hand pills ("Use the X
+  // tool.") — they're noise. Keep the canonical 3 starter prompts (Remember /
+  // What do you remember / HN) as the only quick-click starters; the twin's
+  // cartridges remain callable as tools via the LLM, just not as pills.
   if (summonedTwin) {
-    const sp = document.getElementById('starter-prompts');
-    if (sp) sp.classList.add('hidden');
+    const hand = document.getElementById('hand-cards');
+    if (hand) hand.style.display = 'none';
   }
   wire();
   installHeadlessConsoleApi();
