@@ -195,6 +195,29 @@
     margin-top: 8px;
   }
   .copy-btn:hover { background: rgba(95,196,255,0.2); }
+  .summon-btn {
+    display: inline-block;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    color: #0a0f1a;
+    border: none;
+    padding: 7px 16px;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin: 12px 0 4px;
+    text-decoration: none;
+    box-shadow: 0 0 14px rgba(95, 196, 255, 0.18);
+    transition: transform 0.1s, box-shadow 0.15s;
+  }
+  .summon-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 22px rgba(95, 196, 255, 0.3);
+    text-decoration: none;
+  }
   .toast {
     position: fixed; bottom: 24px; right: 24px;
     background: var(--panel-hi);
@@ -308,6 +331,8 @@ fetch('index.json').then(r => r.json()).then(catalog => {
         sha256: <span>${(e.sha256 || '').slice(0, 16)}…</span><br>
         packed_by: <span>${e.packed_by || '?'}</span> · <span>${(e.packed_at || '').slice(0, 10)}</span>
       </div>
+      <a class="summon-btn" href="summon.html?egg=${encodeURIComponent(e.raw_url)}">Summon → vBrainstem</a>
+      <br>
       <button class="copy-btn" data-cmd="Hatch the egg at ${e.raw_url}, then boot it.">Copy chat command</button>
       <button class="copy-btn" data-cmd="curl -fsSL ${e.raw_url} -o ~/Downloads/${e.slug}.egg">Copy curl recipe</button>
     </div>

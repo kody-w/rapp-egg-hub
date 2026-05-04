@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Summon — rapp-egg-hub</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- JSZip via CDN — used to unzip the .egg in the browser, no server needed -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- Marked for markdown rendering -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<style>
+  :root {
+    --bg-deep: #03060c;
+    --bg: #0a0f1a;
+    --panel: rgba(20, 30, 48, 0.85);
+    --panel-hi: rgba(28, 42, 64, 0.92);
+    --border: rgba(141, 169, 196, 0.18);
+    --border-hi: rgba(95, 196, 255, 0.45);
+    --text: #eaf2fb;
+    --muted: #93a5bb;
+    --accent: #5fc4ff;
+    --accent-glow: rgba(95, 196, 255, 0.4);
+    --green: #8fd960;
+    --gold: #ffc857;
+    --red: #f86361;
+    --purple: #b58ddf;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: linear-gradient(180deg, #0c1a2e 0%, #04080f 100%) fixed;
+    color: var(--text);
+    font: 14px/1.55 "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(circle 800px at 50% -200px, rgba(95, 196, 255, 0.18), transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    position: relative; z-index: 1;
+    padding: 24px 32px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px;
+  }
+  header .logo {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 32% 30%, #b6e5ff 0%, var(--accent) 30%, #1d6da8 70%, #0a2842 100%);
+    box-shadow: 0 0 18px var(--accent-glow);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  header h1 .sub { display: block; font-size: 11px; font-weight: 400; color: var(--muted); margin-top: 2px; letter-spacing: 0; text-transform: none; }
+  header .nav { margin-left: auto; font-size: 12px; }
+  header .nav a { margin-left: 18px; color: var(--muted); }
+  header .nav a:hover { color: var(--text); }
+
+  main {
+    position: relative; z-index: 1;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 36px 32px 80px;
+  }
+
+  .empty, .err, .loading {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-style: italic;
+  }
+  .err {
+    color: var(--red);
+    background: rgba(248, 99, 97, 0.08);
+    border: 1px solid rgba(248, 99, 97, 0.25);
+    border-radius: 6px;
+    font-style: normal;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+  }
+
+  .twin-head {
+    display: flex; gap: 18px; align-items: flex-start;
+    background: var(--panel);
+    border: 1px solid var(--border-hi);
+    border-radius: 12px;
+    padding: 22px 26px;
+    margin-bottom: 18px;
+    box-shadow: 0 0 28px rgba(95, 196, 255, 0.1);
+  }
+  .twin-head .icon {
+    flex-shrink: 0;
+    width: 64px; height: 64px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(95,196,255,0.18), rgba(95,196,255,0.04));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    border: 1px solid var(--border);
+  }
+  .twin-head .meta { flex: 1; min-width: 0; }
+  .twin-head h2 {
+    margin: 0 0 4px;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .twin-head .ids {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--muted);
+    word-break: break-all;
+  }
+  .twin-head .pills {
+    margin-top: 10px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    background: rgba(95, 196, 255, 0.12);
+    color: var(--accent);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pill.green { background: rgba(143, 217, 96, 0.15); color: var(--green); }
+  .pill.gold  { background: rgba(255, 200, 87, 0.15); color: var(--gold); }
+  .pill.purple { background: rgba(181, 141, 223, 0.15); color: var(--purple); }
+  .twin-head .desc {
+    margin-top: 12px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  section.card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 14px 0;
+  }
+  section.card > h3 {
+    margin: 0 0 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  section.card > h3 .count {
+    margin-left: auto;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* Soul markdown render */
+  #soul-render {
+    font-size: 14px;
+    line-height: 1.65;
+  }
+  #soul-render h1, #soul-render h2, #soul-render h3 {
+    color: var(--text);
+    margin-top: 1.2em;
+    margin-bottom: 0.4em;
+  }
+  #soul-render h1 { font-size: 20px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  #soul-render h2 { font-size: 16px; }
+  #soul-render h3 { font-size: 14px; color: var(--accent); }
+  #soul-render code {
+    background: rgba(0,0,0,0.4);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  #soul-render strong { color: var(--text); }
+  #soul-render em { color: var(--muted); }
+  #soul-render blockquote {
+    border-left: 3px solid var(--accent);
+    background: rgba(95, 196, 255, 0.05);
+    padding: 8px 14px;
+    margin: 10px 0;
+    color: var(--muted);
+  }
+  #soul-render ul, #soul-render ol { padding-left: 22px; }
+  #soul-render li { margin: 4px 0; }
+  #soul-render a { color: var(--accent); }
+
+  ul.facts, ul.flat {
+    list-style: none; padding: 0; margin: 0;
+  }
+  ul.facts li {
+    padding: 10px 14px;
+    margin: 6px 0;
+    background: rgba(95, 196, 255, 0.05);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+  ul.flat li {
+    padding: 8px 12px;
+    margin: 4px 0;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  ul.flat li .badge {
+    font-size: 10px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: rgba(143, 217, 96, 0.15);
+    color: var(--green);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  pre.kv {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text);
+    overflow-x: auto;
+  }
+
+  /* Cartridges section */
+  .cart-toolbar {
+    display: flex; gap: 10px; align-items: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .cart-search {
+    flex: 1; min-width: 180px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 7px 10px;
+    font: inherit; font-size: 12px;
+  }
+  .cart-search:focus { outline: none; border-color: var(--border-hi); }
+  .cart-filter-pill {
+    padding: 4px 11px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 999px;
+    font-size: 11px; cursor: pointer;
+    user-select: none;
+    transition: all 0.1s;
+  }
+  .cart-filter-pill.active {
+    background: rgba(95, 196, 255, 0.15);
+    color: var(--accent);
+    border-color: var(--border-hi);
+  }
+  .cart-list {
+    display: grid;
+    gap: 8px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .cart-item {
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 14px;
+    display: flex; gap: 12px;
+    align-items: flex-start;
+  }
+  .cart-item.enabled {
+    background: rgba(143, 217, 96, 0.06);
+    border-color: rgba(143, 217, 96, 0.3);
+  }
+  .cart-item .cart-info { flex: 1; min-width: 0; }
+  .cart-item .cart-name {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 13px;
+  }
+  .cart-item .cart-slug {
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 6px;
+  }
+  .cart-item .cart-desc {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 2px;
+    line-height: 1.45;
+  }
+  .cart-item .cart-tags {
+    margin-top: 6px;
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .cart-item .cart-tag {
+    font-size: 10px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.05);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .cart-item .cart-tag.tier { color: var(--gold); border-color: rgba(255,200,87,0.3); }
+  .cart-item .cart-tag.bundled { color: var(--accent); border-color: rgba(95,196,255,0.3); }
+  .cart-item .cart-tag.local { color: var(--purple); border-color: rgba(181,141,223,0.3); }
+  .cart-item .cart-actions {
+    display: flex; gap: 6px;
+    flex-shrink: 0;
+  }
+  .cart-btn {
+    background: rgba(95, 196, 255, 0.08);
+    color: var(--accent);
+    border: 1px solid rgba(95, 196, 255, 0.25);
+    padding: 5px 11px;
+    border-radius: 4px;
+    font: inherit; font-size: 11px;
+    font-family: ui-monospace, monospace;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .cart-btn:hover { background: rgba(95, 196, 255, 0.18); }
+  .cart-btn.green {
+    background: rgba(143, 217, 96, 0.1);
+    color: var(--green);
+    border-color: rgba(143, 217, 96, 0.3);
+  }
+  .cart-btn.green:hover { background: rgba(143, 217, 96, 0.22); }
+  .cart-btn.red {
+    background: rgba(248, 99, 97, 0.08);
+    color: var(--red);
+    border-color: rgba(248, 99, 97, 0.3);
+  }
+  .cart-btn.red:hover { background: rgba(248, 99, 97, 0.18); }
+
+  .enabled-strip {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 12px;
+    min-height: 24px;
+  }
+  .enabled-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px 4px 12px;
+    background: rgba(143, 217, 96, 0.1);
+    color: var(--green);
+    border: 1px solid rgba(143, 217, 96, 0.3);
+    border-radius: 999px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .enabled-pill:hover { background: rgba(248, 99, 97, 0.1); color: var(--red); border-color: rgba(248, 99, 97, 0.3); }
+  .enabled-pill::after { content: '×'; font-size: 14px; line-height: 1; opacity: 0.6; }
+  .enabled-pill:hover::after { opacity: 1; }
+
+  .recipe {
+    background: rgba(143, 217, 96, 0.06);
+    border: 1px solid rgba(143, 217, 96, 0.25);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 18px 0 8px;
+  }
+  .recipe h3 {
+    margin: 0 0 10px;
+    font-size: 14px;
+    color: var(--green);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .recipe pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 12px 14px;
+    font-size: 12px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+  .recipe button.copy {
+    background: rgba(143, 217, 96, 0.12);
+    color: var(--green);
+    border: 1px solid rgba(143, 217, 96, 0.3);
+    padding: 5px 12px;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  .recipe button.copy:hover { background: rgba(143, 217, 96, 0.25); }
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--panel-hi);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 999;
+    max-width: 320px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.err { border-color: rgba(248, 99, 97, 0.5); color: var(--red); }
+
+  .file-tree { font-family: ui-monospace, monospace; font-size: 11px; color: var(--muted); }
+  .file-tree .row { padding: 2px 0; }
+  .file-tree .row .size { color: var(--gold); }
+
+  footer {
+    text-align: center;
+    padding: 28px 16px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+  .phase2-note {
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 12px;
+    background: rgba(255, 200, 87, 0.05);
+    border: 1px dashed rgba(255, 200, 87, 0.3);
+    border-radius: 6px;
+    padding: 12px 16px;
+  }
+  .phase2-note strong { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" aria-hidden="true"></div>
+  <h1>SUMMON
+    <span class="sub" id="subtitle">virtual file system · in-browser egg explorer</span>
+  </h1>
+  <div class="nav">
+    <a href="./">Hub</a>
+    <a href="SPEC.md">Spec</a>
+    <a href="https://github.com/kody-w/rapp-egg-hub">GitHub</a>
+  </div>
+</header>
+
+<main id="main">
+  <div class="loading" id="status">Waiting for egg URL…</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  rapp-egg-hub · <a href="https://github.com/kody-w/rapp-egg-hub">source</a> · <a href="SPEC.md">rapp-twin-spec/1.0</a>
+</footer>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// Constants
+// ════════════════════════════════════════════════════════════════════
+const RAR_REGISTRY_URL = 'https://raw.githubusercontent.com/kody-w/RAR/main/registry.json';
+const RAR_RAW_BASE     = 'https://raw.githubusercontent.com/kody-w/RAR/main/';
+
+const ICON_BY_KIND = {
+  memorial: '🕊️', personal: '👤', 'pre-founder': '🚀',
+  project: '📋', place: '📍', custom: '🥚',
+};
+
+// ════════════════════════════════════════════════════════════════════
+// Virtual Filesystem (localStorage-backed)
+// Stores hatched egg files + hot-loaded RAR agents
+// ════════════════════════════════════════════════════════════════════
+const VFS = {
+  _prefix: 'egghub-vfs:',
+  read(path)  { return localStorage.getItem(VFS._prefix + path); },
+  write(path, content) { try { localStorage.setItem(VFS._prefix + path, content); return true; } catch(e) { console.warn('VFS quota:', e.message); return false; } },
+  exists(path){ return localStorage.getItem(VFS._prefix + path) !== null; },
+  remove(path){ localStorage.removeItem(VFS._prefix + path); },
+  list(prefix='') {
+    const out = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k.startsWith(VFS._prefix + prefix)) out.push(k.slice(VFS._prefix.length));
+    }
+    return out;
+  },
+  listAgents() { return VFS.list('agents/').filter(p => p.endsWith('.py')); },
+};
+
+// In-memory state
+const state = {
+  egg: null,           // { eggUrl, manifest, rappid, memory, soulMd, agents, files, hash, eggBytes }
+  rarRegistry: [],     // RAR catalog entries
+  cartridges: [],      // unified cartridge view: bundled (from egg) + RAR + local hot-loaded
+  enabled: new Set(JSON.parse(localStorage.getItem('egghub-enabled-cartridges') || '[]')),
+  search: '',
+  filter: 'all',       // all | bundled | rar | enabled
+};
+
+// ════════════════════════════════════════════════════════════════════
+// Utilities
+// ════════════════════════════════════════════════════════════════════
+function el(html) {
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html.trim();
+  return tmp.firstElementChild;
+}
+function escape(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function fmtBytes(n) {
+  if (!n) return '0 B';
+  if (n < 1024) return n + ' B';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/(1024*1024)).toFixed(1) + ' MB';
+}
+function toast(msg, isErr=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.className = 'toast' + (isErr ? ' err' : ''), 2400);
+}
+function copy(text) {
+  navigator.clipboard.writeText(text).then(() => toast('Copied'));
+}
+async function sha256(buffer) {
+  const hash = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function persistEnabled() {
+  localStorage.setItem('egghub-enabled-cartridges', JSON.stringify([...state.enabled]));
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Manifest extraction (RAR vbrainstem pattern — regex parse, no eval)
+// ════════════════════════════════════════════════════════════════════
+function parseAgentSource(filename, source) {
+  // Try to extract __manifest__ dict literal
+  const manifestMatch = source.match(/__manifest__\s*=\s*(\{[\s\S]*?\n\})/);
+  let manifest = null;
+  if (manifestMatch) {
+    const jsonStr = manifestMatch[1]
+      .replace(/#[^\n]*/g, '')
+      .replace(/'/g, '"')
+      .replace(/True/g, 'true')
+      .replace(/False/g, 'false')
+      .replace(/None/g, 'null')
+      .replace(/,\s*([\]}])/g, '$1');
+    try { manifest = JSON.parse(jsonStr); } catch(_) { manifest = null; }
+  }
+  // Docstring fallback for description
+  const docMatch = source.match(/^(?:"""([\s\S]*?)"""|'''([\s\S]*?)''')/m);
+  const docstring = ((docMatch && (docMatch[1] || docMatch[2])) || '').trim();
+  // Class name fallback for display_name
+  const classMatch = source.match(/class\s+(\w+)\s*\(/);
+  const className = classMatch ? classMatch[1] : null;
+
+  if (!manifest) manifest = {};
+  const stem = filename.replace(/\.py$/, '');
+  return {
+    schema: 'rapp-agent/1.0',
+    name: manifest.name || `@local/${stem}`,
+    display_name: manifest.display_name || className || stem.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase()),
+    description: manifest.description || docstring.split('\n')[0] || `Loaded from ${filename}`,
+    author: manifest.author || 'Local',
+    version: manifest.version || '0.0.0',
+    category: manifest.category || 'general',
+    tags: manifest.tags || [],
+    requires_env: manifest.requires_env || [],
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Egg fetch + unpack
+// ════════════════════════════════════════════════════════════════════
+async function fetchAndUnpackEgg(eggUrl) {
+  setStatus('Fetching egg…', 'loading');
+  const r = await fetch(eggUrl);
+  if (!r.ok) throw new Error('Fetch returned ' + r.status);
+  const buf = await r.arrayBuffer();
+  const hash = await sha256(buf);
+
+  setStatus('Unpacking egg…', 'loading');
+  const zip = await JSZip.loadAsync(buf);
+  const manifestFile = zip.file('manifest.json');
+  if (!manifestFile) throw new Error('No manifest.json — not a valid .egg');
+  const manifest = JSON.parse(await manifestFile.async('text'));
+
+  const get = async (path) => {
+    const f = zip.file(path);
+    return f ? await f.async('text') : null;
+  };
+
+  const [soulMd, rappidJson, memoryJson] = await Promise.all([
+    get('repo/soul.md'),
+    get('repo/rappid.json'),
+    get('data/memory.json'),
+  ]);
+
+  let rappid = {};
+  try { rappid = rappidJson ? JSON.parse(rappidJson) : {}; } catch(_) {}
+  let memory = {};
+  try { memory = memoryJson ? JSON.parse(memoryJson) : {}; } catch(_) {}
+
+  // Pull bundled agent sources into VFS so they participate in the unified cartridge view
+  const agents = [];
+  const filePromises = [];
+  zip.forEach((path, file) => {
+    if (file.dir) return;
+    if (path.startsWith('repo/agents/') && path.endsWith('.py')) {
+      const fname = path.replace('repo/agents/', '');
+      filePromises.push(file.async('text').then(src => {
+        const m = parseAgentSource(fname, src);
+        VFS.write(`agents/${fname}`, src);
+        agents.push({ filename: fname, source: src, manifest: m, _bundled: true, _eggUrl: eggUrl });
+      }));
+    }
+  });
+  await Promise.all(filePromises);
+
+  const files = [];
+  zip.forEach((path, file) => {
+    if (!file.dir) files.push({ path, size: file._data?.uncompressedSize || 0 });
+  });
+
+  return { eggUrl, manifest, rappid, memory, soulMd, agents, files, hash, eggBytes: buf.byteLength };
+}
+
+// ════════════════════════════════════════════════════════════════════
+// RAR registry
+// ════════════════════════════════════════════════════════════════════
+async function loadRARRegistry() {
+  try {
+    const r = await fetch(RAR_REGISTRY_URL);
+    if (!r.ok) throw new Error('RAR registry: ' + r.status);
+    const data = await r.json();
+    state.rarRegistry = (data.agents || []).filter(a => a._file);
+  } catch(e) {
+    console.warn('RAR registry load failed:', e.message);
+    state.rarRegistry = [];
+  }
+}
+
+async function hotLoadFromRAR(slug) {
+  const entry = state.rarRegistry.find(a => a.name === slug);
+  if (!entry) { toast('Unknown RAR agent: ' + slug, true); return false; }
+  toast(`Fetching ${entry.display_name || slug}…`);
+  try {
+    const url = RAR_RAW_BASE + entry._file;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('RAR fetch ' + r.status);
+    const source = await r.text();
+    const filename = entry._file.split('/').pop();
+    VFS.write(`agents/${filename}`, source);
+    // Parse + cache parsed manifest in localStorage
+    const parsed = parseAgentSource(filename, source);
+    VFS.write(`manifests/${filename}.json`, JSON.stringify(parsed));
+    state.enabled.add(slug);
+    persistEnabled();
+    rebuildCartridges();
+    toast(`Hot-loaded ${parsed.display_name}`);
+    return true;
+  } catch(e) {
+    toast('Failed: ' + e.message, true);
+    return false;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Cartridge unified view
+// ════════════════════════════════════════════════════════════════════
+function rebuildCartridges() {
+  const carts = new Map();
+
+  // Egg-bundled agents (auto-enabled, since the user just summoned them)
+  if (state.egg) {
+    for (const a of state.egg.agents) {
+      const slug = a.manifest.name;
+      carts.set(slug, {
+        slug,
+        display_name: a.manifest.display_name,
+        description: a.manifest.description,
+        version: a.manifest.version,
+        category: a.manifest.category,
+        tags: a.manifest.tags || [],
+        sources: ['bundled'],
+        filename: a.filename,
+        _file: 'agents/' + a.filename,
+      });
+      state.enabled.add(slug);
+    }
+  }
+
+  // RAR registry entries
+  for (const r of state.rarRegistry) {
+    const existing = carts.get(r.name);
+    if (existing) {
+      existing.sources.push('rar');
+    } else {
+      carts.set(r.name, {
+        slug: r.name,
+        display_name: r.display_name || r.name,
+        description: r.description || '',
+        version: r.version || '?',
+        category: r.category || 'general',
+        tags: r.tags || [],
+        quality_tier: r.quality_tier,
+        sources: ['rar'],
+        _file: r._file,
+        _rar: true,
+      });
+    }
+  }
+
+  // VFS agents that aren't in RAR or egg (locally hot-loaded from drag-and-drop, etc.)
+  for (const path of VFS.listAgents()) {
+    const filename = path.replace('agents/', '');
+    const manifestRaw = VFS.read(`manifests/${filename}.json`);
+    if (!manifestRaw) continue;
+    try {
+      const m = JSON.parse(manifestRaw);
+      if (!carts.has(m.name)) {
+        carts.set(m.name, {
+          slug: m.name, display_name: m.display_name, description: m.description,
+          version: m.version, category: m.category, tags: m.tags || [],
+          sources: ['local'], filename, _file: path,
+        });
+      }
+    } catch(_) {}
+  }
+
+  state.cartridges = [...carts.values()].sort((a, b) => {
+    const aOn = state.enabled.has(a.slug) ? 0 : 1;
+    const bOn = state.enabled.has(b.slug) ? 0 : 1;
+    if (aOn !== bOn) return aOn - bOn;
+    return a.display_name.localeCompare(b.display_name);
+  });
+
+  persistEnabled();
+  renderCartridges();
+  renderEnabledStrip();
+}
+
+function filterCartridges() {
+  const q = state.search.toLowerCase();
+  return state.cartridges.filter(c => {
+    if (state.filter === 'bundled' && !c.sources.includes('bundled')) return false;
+    if (state.filter === 'rar'     && !c.sources.includes('rar'))     return false;
+    if (state.filter === 'enabled' && !state.enabled.has(c.slug))     return false;
+    if (q) {
+      const hay = `${c.slug} ${c.display_name} ${c.description} ${(c.tags||[]).join(' ')} ${c.category}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderCartridges() {
+  const list = document.getElementById('cart-list');
+  if (!list) return;
+  const items = filterCartridges();
+  if (!items.length) {
+    list.innerHTML = '<div style="color:var(--muted); font-size:12px; padding:18px; text-align:center;">No cartridges match.</div>';
+    return;
+  }
+  list.innerHTML = items.map(c => {
+    const on = state.enabled.has(c.slug);
+    const src = c.sources;
+    const tags = [];
+    if (src.includes('bundled')) tags.push('<span class="cart-tag bundled">bundled</span>');
+    if (src.includes('rar'))     tags.push('<span class="cart-tag">RAR</span>');
+    if (src.includes('local'))   tags.push('<span class="cart-tag local">local</span>');
+    if (c.quality_tier)          tags.push(`<span class="cart-tag tier">${escape(c.quality_tier)}</span>`);
+    if (c.category)              tags.push(`<span class="cart-tag">${escape(c.category)}</span>`);
+    const inVFS = !!VFS.read(`agents/${c.filename || (c._file || '').split('/').pop()}`);
+    return `
+      <div class="cart-item ${on ? 'enabled' : ''}">
+        <div class="cart-info">
+          <div class="cart-name">${escape(c.display_name)} <span class="cart-slug">${escape(c.slug)}</span></div>
+          <div class="cart-desc">${escape(c.description)}</div>
+          <div class="cart-tags">${tags.join('')}</div>
+        </div>
+        <div class="cart-actions">
+          ${inVFS
+            ? `<button class="cart-btn ${on ? 'red' : 'green'}" onclick="toggleCartridge('${escape(c.slug)}')">${on ? 'Disable' : 'Enable'}</button>`
+            : `<button class="cart-btn green" onclick="loadCartridge('${escape(c.slug)}')">Hot-load</button>`}
+          <button class="cart-btn" onclick="downloadCartridge('${escape(c.slug)}')" title="Download .py">↓</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderEnabledStrip() {
+  const strip = document.getElementById('enabled-strip');
+  if (!strip) return;
+  const on = state.cartridges.filter(c => state.enabled.has(c.slug));
+  if (!on.length) {
+    strip.innerHTML = '<span style="color:var(--muted); font-size:11px;">No cartridges enabled. Hot-load some below.</span>';
+    return;
+  }
+  strip.innerHTML = on.map(c =>
+    `<span class="enabled-pill" onclick="toggleCartridge('${escape(c.slug)}')" title="Click to disable">${escape(c.display_name)}</span>`
+  ).join('');
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Cartridge actions (called from inline onclick)
+// ════════════════════════════════════════════════════════════════════
+window.toggleCartridge = function(slug) {
+  if (state.enabled.has(slug)) state.enabled.delete(slug);
+  else state.enabled.add(slug);
+  persistEnabled();
+  renderCartridges();
+  renderEnabledStrip();
+};
+
+window.loadCartridge = async function(slug) {
+  const cart = state.cartridges.find(c => c.slug === slug);
+  if (!cart) return;
+  if (cart.sources.includes('rar')) {
+    await hotLoadFromRAR(slug);
+  } else if (cart.sources.includes('bundled')) {
+    state.enabled.add(slug);
+    persistEnabled();
+    rebuildCartridges();
+  }
+};
+
+window.downloadCartridge = async function(slug) {
+  const cart = state.cartridges.find(c => c.slug === slug);
+  if (!cart) return;
+  let source = null;
+  let filename = (cart.filename || (cart._file || '').split('/').pop()) || `${slug.replace(/[@\/]/g,'-')}.py`;
+
+  // Try VFS first
+  if (cart.filename) source = VFS.read(`agents/${cart.filename}`);
+  if (!source && cart._file) source = VFS.read(cart._file);
+
+  // Fetch from RAR if not cached
+  if (!source && cart.sources.includes('rar') && cart._file) {
+    try {
+      const r = await fetch(RAR_RAW_BASE + cart._file);
+      if (r.ok) source = await r.text();
+      filename = cart._file.split('/').pop();
+    } catch(_) {}
+  }
+  if (!source) { toast('Source not available', true); return; }
+
+  const blob = new Blob([source], { type: 'text/x-python' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+  toast(`Downloaded ${filename}`);
+};
+
+window.setCartFilter = function(f) {
+  state.filter = f;
+  document.querySelectorAll('.cart-filter-pill').forEach(p => p.classList.toggle('active', p.dataset.filter === f));
+  renderCartridges();
+};
+
+// ════════════════════════════════════════════════════════════════════
+// Status helper
+// ════════════════════════════════════════════════════════════════════
+function setStatus(text, cls='loading') {
+  const s = document.getElementById('status');
+  if (!s) return;
+  s.textContent = text;
+  s.className = cls;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Render the full twin view
+// ════════════════════════════════════════════════════════════════════
+function renderTwin(egg) {
+  const main = document.getElementById('main');
+  const sub = document.getElementById('subtitle');
+  const { manifest, rappid, memory, soulMd, agents, files, hash, eggBytes, eggUrl } = egg;
+  const displayName = rappid.display_name || rappid.name || manifest.source?.name || 'unnamed twin';
+  const kind = rappid.kind || 'unknown';
+  const icon = ICON_BY_KIND[kind] || '🥚';
+  sub.textContent = `${displayName} · hatched in your browser's virtual file system`;
+  document.title = `${displayName} — Summon`;
+
+  main.innerHTML = '';
+
+  // Twin head
+  const head = el(`
+    <div class="twin-head">
+      <div class="icon">${icon}</div>
+      <div class="meta">
+        <h2>${escape(displayName)}</h2>
+        <div class="ids">rappid: ${escape(rappid.rappid || manifest.source?.rappid_uuid || '?')}</div>
+        <div class="pills">
+          <span class="pill">${escape(kind)}</span>
+          <span class="pill green">${escape(manifest.schema || '?')}</span>
+          ${rappid.github ? `<span class="pill purple">${escape(rappid.github.replace('https://github.com/',''))}</span>` : ''}
+          ${rappid.private_companion ? `<span class="pill gold">private layer</span>` : ''}
+          ${agents.length ? `<span class="pill">${agents.length} bundled cartridge${agents.length===1?'':'s'}</span>` : ''}
+        </div>
+        ${rappid.description ? `<div class="desc">${escape(rappid.description)}</div>` : ''}
+      </div>
+    </div>
+  `);
+  main.appendChild(head);
+
+  // Soul.md rendered as markdown
+  if (soulMd && window.marked) {
+    const soulCard = el(`
+      <section class="card">
+        <h3>Soul <span class="count">the voice</span></h3>
+        <div id="soul-render"></div>
+      </section>
+    `);
+    soulCard.querySelector('#soul-render').innerHTML = window.marked.parse(soulMd);
+    main.appendChild(soulCard);
+  }
+
+  // Memory facts
+  if (memory.facts && memory.facts.length) {
+    main.appendChild(el(`
+      <section class="card">
+        <h3>Preserved Memory <span class="count">${memory.facts.length} fact${memory.facts.length===1?'':'s'}</span></h3>
+        <ul class="facts">
+          ${memory.facts.map(f => `<li>${escape(f)}</li>`).join('')}
+        </ul>
+        ${memory.preserved_by ? `<p style="color:var(--muted); font-size:12px; margin-top:14px;">Preserved by ${escape(memory.preserved_by)}${memory.preserved_at ? ' · ' + escape(memory.preserved_at) : ''}</p>` : ''}
+      </section>
+    `));
+  }
+
+  // ── Cartridges (unified: bundled + RAR + locally hot-loaded) ──
+  const cartCard = el(`
+    <section class="card">
+      <h3>Cartridges
+        <span class="count" id="cart-count">${state.cartridges.length}</span>
+      </h3>
+      <p style="color:var(--muted); font-size:12px; margin: -4px 0 12px;">
+        Egg-bundled agents are auto-enabled. Hot-load more from
+        <a href="https://github.com/kody-w/RAR" target="_blank">RAR</a>
+        — they'll be cached in your browser VFS and sent to the brainstem when you connect Phase 2 chat.
+      </p>
+      <div id="enabled-strip" class="enabled-strip"></div>
+      <div class="cart-toolbar">
+        <input class="cart-search" id="cart-search" type="text" placeholder="Search cartridges by name, tag, or category…">
+        <span class="cart-filter-pill active" data-filter="all"     onclick="setCartFilter('all')">All</span>
+        <span class="cart-filter-pill"        data-filter="bundled" onclick="setCartFilter('bundled')">Bundled</span>
+        <span class="cart-filter-pill"        data-filter="rar"     onclick="setCartFilter('rar')">RAR</span>
+        <span class="cart-filter-pill"        data-filter="enabled" onclick="setCartFilter('enabled')">Enabled</span>
+      </div>
+      <div id="cart-list" class="cart-list"></div>
+    </section>
+  `);
+  main.appendChild(cartCard);
+
+  // Wire search
+  cartCard.querySelector('#cart-search').addEventListener('input', e => {
+    state.search = e.target.value;
+    renderCartridges();
+  });
+
+  // Lineage
+  const lineage = manifest.source || {};
+  if (lineage.parent_rappid_uuid || rappid.parent_rappid) {
+    main.appendChild(el(`
+      <section class="card">
+        <h3>Lineage</h3>
+        <pre class="kv">parent_rappid:  ${escape(lineage.parent_rappid_uuid || rappid.parent_rappid || '?')}
+parent_repo:    ${escape(lineage.repo || rappid.parent_repo || '?')}
+brainstem.ver:  ${escape((manifest.brainstem || {}).version || '?')}
+exported_at:    ${escape(manifest.exported_at || '?')}
+exported_by:    ${escape(manifest.exported_by || '?')}</pre>
+      </section>
+    `));
+  }
+
+  // Private companion (if declared)
+  if (rappid.private_companion) {
+    const pc = rappid.private_companion;
+    main.appendChild(el(`
+      <section class="card">
+        <h3>Private Companion <span class="count">auth-gated escalation</span></h3>
+        <pre class="kv">repo:           ${escape(pc.repo || '?')}
+purpose:        ${escape(pc.purpose || '?')}
+access_required: ${escape(pc.access_required || '?')}
+auth scheme:    ${escape((pc.auth || {}).scheme || '?')}</pre>
+        <p style="color:var(--muted); font-size:12px; margin-top:10px;">
+          Anonymous visitors see only what's in the egg. Collaborators with read access on the private repo get richer context at runtime.
+        </p>
+      </section>
+    `));
+  }
+
+  // File tree
+  const sortedFiles = [...files].sort((a,b) => a.path.localeCompare(b.path));
+  main.appendChild(el(`
+    <section class="card">
+      <h3>Egg Contents <span class="count">${files.length} file${files.length===1?'':'s'} · ${fmtBytes(eggBytes)}</span></h3>
+      <div class="file-tree">
+        ${sortedFiles.map(f => `<div class="row">${escape(f.path)} ${f.size ? `<span class="size">(${fmtBytes(f.size)})</span>` : ''}</div>`).join('')}
+      </div>
+      <p style="color:var(--muted); font-size:12px; margin-top:14px;">
+        sha256: <span style="font-family:ui-monospace,monospace; color:var(--gold);">${escape(hash)}</span>
+      </p>
+    </section>
+  `));
+
+  // Hatch recipe
+  main.appendChild(el(`
+    <div class="recipe">
+      <h3>Hatch this egg locally</h3>
+      <p style="color:var(--muted); font-size:13px; margin: 0 0 8px;">
+        This page shows what's IN the egg and lets you stage cartridges. To actually <strong>chat with the twin</strong>, run a brainstem locally:
+      </p>
+      <pre id="cmd1"># 1. Install the brainstem (one-time)
+curl -fsSL https://kody-w.github.io/rapp-installer/install.sh | bash
+
+# 2. Drop in the Twin + Estate cartridges
+curl -fsSL https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/agents/twin_agent.py \\
+     -o ~/.brainstem/src/rapp_brainstem/agents/twin_agent.py
+curl -fsSL https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/agents/estate_agent.py \\
+     -o ~/.brainstem/src/rapp_brainstem/agents/estate_agent.py
+
+# 3. Boot
+bash ~/.brainstem/src/rapp_brainstem/start.sh</pre>
+      <button class="copy" data-target="cmd1">Copy install</button>
+
+      <p style="color:var(--muted); font-size:13px; margin-top:14px;">
+        Then in chat at <code>http://127.0.0.1:7071/</code>:
+      </p>
+      <pre id="cmd2">"Hatch the egg at ${escape(eggUrl)}, then boot it."</pre>
+      <button class="copy" data-target="cmd2">Copy chat command</button>
+
+      <div class="phase2-note">
+        <strong>Phase 1 (live now):</strong> in-browser egg unpack + cartridge VFS. Hot-load any agent.py from RAR; sources are cached in localStorage and ready to send to a brainstem.
+        <br>
+        <strong>Phase 2 (next):</strong> in-browser chat via Pyodide; the staged cartridges run without leaving the page. Tracking the work in <a href="https://github.com/kody-w/rapp-egg-hub/issues">issues</a>.
+      </div>
+    </div>
+  `));
+
+  // Wire copy buttons
+  main.querySelectorAll('.recipe button.copy').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = document.getElementById(btn.dataset.target);
+      if (target) copy(target.textContent);
+    });
+  });
+
+  rebuildCartridges();
+}
+
+// ════════════════════════════════════════════════════════════════════
+// Boot
+// ════════════════════════════════════════════════════════════════════
+async function boot() {
+  const params = new URLSearchParams(location.search);
+  const eggUrl = params.get('egg');
+
+  if (!eggUrl) {
+    document.getElementById('status').innerHTML = `
+      <p>This page summons a digital-twin <code>.egg</code> into your browser's virtual file system.</p>
+      <p style="margin-top:14px;">Pass an egg URL via <code>?egg=&lt;url&gt;</code>, or pick one from the <a href="./">hub</a>.</p>
+    `;
+    return;
+  }
+
+  // Fetch egg + RAR registry in parallel
+  try {
+    const [egg] = await Promise.all([
+      fetchAndUnpackEgg(eggUrl),
+      loadRARRegistry(),
+    ]);
+    state.egg = egg;
+    renderTwin(egg);
+  } catch (e) {
+    setStatus('Error: ' + e.message, 'err');
+    console.error(e);
+  }
+}
+
+boot();
+</script>
+
+</body>
+</html>
