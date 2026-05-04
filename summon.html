@@ -826,11 +826,40 @@ function renderEnabledStrip() {
   const on = state.cartridges.filter(c => state.enabled.has(c.slug));
   if (!on.length) {
     strip.innerHTML = '<span style="color:var(--muted); font-size:11px;">No cartridges enabled. Hot-load some below.</span>';
+  } else {
+    strip.innerHTML = on.map(c =>
+      `<span class="enabled-pill" onclick="toggleCartridge('${escape(c.slug)}')" title="Click to disable">${escape(c.display_name)}</span>`
+    ).join('');
+  }
+  updateChatLink();
+}
+
+// Build a deep-link to RAR's vbrainstem with the enabled cartridges that are
+// known to RAR. Bundled-only agents (not in RAR) can't be loaded into the
+// shared runtime — surface that as a note.
+function updateChatLink() {
+  const btn = document.getElementById('chat-vb-btn');
+  const note = document.getElementById('chat-vb-note');
+  if (!btn) return;
+  const enabledCarts = state.cartridges.filter(c => state.enabled.has(c.slug));
+  const rarSlugs   = enabledCarts.filter(c => c.sources.includes('rar')).map(c => c.slug);
+  const onlyBundled = enabledCarts.filter(c => !c.sources.includes('rar'));
+
+  if (rarSlugs.length === 0) {
+    btn.removeAttribute('href');
+    btn.style.opacity = '0.4';
+    btn.style.pointerEvents = 'none';
+    note.textContent = 'Enable a RAR-known cartridge to launch the runtime.';
     return;
   }
-  strip.innerHTML = on.map(c =>
-    `<span class="enabled-pill" onclick="toggleCartridge('${escape(c.slug)}')" title="Click to disable">${escape(c.display_name)}</span>`
-  ).join('');
+  const url = 'https://kody-w.github.io/RAR/virtual-brainstem-summon.html?' +
+    rarSlugs.map(s => 'agent=' + encodeURIComponent(s)).join('&');
+  btn.href = url;
+  btn.style.opacity = '1';
+  btn.style.pointerEvents = 'auto';
+  const parts = [`${rarSlugs.length} RAR cartridge${rarSlugs.length===1?'':'s'} ready`];
+  if (onlyBundled.length) parts.push(`${onlyBundled.length} bundled-only (need local brainstem)`);
+  note.textContent = parts.join(' · ');
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -969,9 +998,16 @@ function renderTwin(egg) {
       <p style="color:var(--muted); font-size:12px; margin: -4px 0 12px;">
         Egg-bundled agents are auto-enabled. Hot-load more from
         <a href="https://github.com/kody-w/RAR" target="_blank">RAR</a>
-        — they'll be cached in your browser VFS and sent to the brainstem when you connect Phase 2 chat.
+        — sources are cached in your browser VFS. Click <strong>Chat in vBrainstem</strong>
+        to open the enabled cartridges in the RAR runtime (browser-native, no install).
       </p>
       <div id="enabled-strip" class="enabled-strip"></div>
+      <div style="margin: 4px 0 14px;">
+        <a id="chat-vb-btn" class="cart-btn green" style="display:inline-block; padding:7px 14px; font-size:12px; text-decoration:none;" target="_blank">
+          → Chat in vBrainstem
+        </a>
+        <span id="chat-vb-note" style="margin-left:10px; color:var(--muted); font-size:11px;"></span>
+      </div>
       <div class="cart-toolbar">
         <input class="cart-search" id="cart-search" type="text" placeholder="Search cartridges by name, tag, or category…">
         <span class="cart-filter-pill active" data-filter="all"     onclick="setCartFilter('all')">All</span>
