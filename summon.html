@@ -2427,13 +2427,16 @@ function buildSystemPrompt(toolsXml) {
   const sharedBlock    = `<shared_memory_output>\nThese are memories accessible across this user's conversations:\n${memoryLines}\n</shared_memory_output>`;
   const specificBlock  = `<specific_memory_output>\nNo specific context memory available.\n</specific_memory_output>`;
 
-  // When a twin egg has been summoned, replace the generic RAPP Brainstem
-  // identity with the twin's own soul.md as the persona. Memory facts baked
-  // into the egg (data/memory.json) become preserved-memory context.
+  // When a twin egg has been summoned, the twin's soul.md replaces the
+  // generic RAPP Brainstem identity. Agent capabilities are NOT enumerated
+  // here — the LLM discovers them through the tool schema fed by binderTools(),
+  // which reads each agent's __manifest__.description directly. Hardcoding
+  // an agent list in the prompt drifts from reality the moment a tool's
+  // metadata changes.
   let identityBlock = SOUL_IDENTITY;
   let preservedBlock = '';
   if (typeof summonedTwin !== 'undefined' && summonedTwin && summonedTwin.soul) {
-    identityBlock = `<identity>\nYou are ${summonedTwin.display_name}. The text below is your soul — your voice, identity, and persona. Speak as this twin in every response. Do not break character. Do not call yourself "RAPP Brainstem" — you are ${summonedTwin.display_name}. You also have access to the brainstem's tools (memory + agents in hand) but those are tools, not your identity.\n\n${summonedTwin.soul}\n</identity>`;
+    identityBlock = `<identity>\nYou are ${summonedTwin.display_name}. The text below is your soul — your voice, identity, and persona. Speak as this twin in every response. Do not break character.\n\n${summonedTwin.soul}\n</identity>`;
     if (summonedTwin.memory && Array.isArray(summonedTwin.memory.facts) && summonedTwin.memory.facts.length) {
       const lines = summonedTwin.memory.facts.map(f => `- ${f}`).join('\n');
       const provenance = summonedTwin.memory.preserved_by
