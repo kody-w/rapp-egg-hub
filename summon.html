@@ -1963,8 +1963,12 @@
       </div>
       <div id="cpsignin-step2" hidden>
         <p style="font-size:13px;color:#8b949e;margin-bottom:10px">Open GitHub and enter this code:</p>
-        <div style="background:#0d1117;border:1px solid #238636;border-radius:8px;padding:18px;text-align:center;margin-bottom:14px">
+        <div style="background:#0d1117;border:1px solid #238636;border-radius:8px;padding:18px;text-align:center;margin-bottom:14px;position:relative">
           <div style="font-family:'SF Mono',monospace;font-size:32px;letter-spacing:6px;color:#3fb950;font-weight:700" id="cpsignin-code">XXXX-XXXX</div>
+          <button type="button" id="cpsignin-copy" title="Copy code"
+                  style="margin-top:10px;background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.3);padding:6px 14px;border-radius:6px;font:600 12px -apple-system,sans-serif;cursor:pointer">
+            📋 Copy code
+          </button>
         </div>
         <a href="#" id="cpsignin-link" target="_blank" rel="noopener" class="btn primary" style="display:block;text-align:center;text-decoration:none;margin-bottom:14px">Open https://github.com/login/device →</a>
         <p style="font-size:12px;color:#6e7681;text-align:center">
@@ -3038,6 +3042,27 @@ async function runCopilotSignin() {
     $('#cpsignin-link').href = verification_uri;
     $('#cpsignin-link').textContent = verification_uri;
     $('#cpsignin-step2').hidden = false;
+    // Wire copy-to-clipboard. Re-bind every login attempt (no cleanup needed
+    // — innerHTML for step2 is static so the button always exists).
+    const copyBtn = document.getElementById('cpsignin-copy');
+    if (copyBtn) {
+      const orig = copyBtn.innerHTML;
+      copyBtn.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(user_code);
+          copyBtn.innerHTML = '✓ Copied';
+          setTimeout(() => { copyBtn.innerHTML = orig; }, 1600);
+        } catch (e) {
+          // navigator.clipboard fails on insecure origins / older mobile —
+          // fall back to a visible selection so the user can long-press copy.
+          const range = document.createRange();
+          range.selectNodeContents(document.getElementById('cpsignin-code'));
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      };
+    }
     const interval = (state.pendingDeviceLogin?.interval || 5) * 1000;
     const expires  = state.pendingDeviceLogin?.expires_at || (Date.now() + 900000);
     while (Date.now() < expires && state.pendingDeviceLogin) {
