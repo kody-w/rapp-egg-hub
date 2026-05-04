@@ -1768,6 +1768,128 @@
       // and racy to drop the user back to "Loading…").
       let _rappFrameState = null;
 
+      // Inject a tiny floating toolbar at the bottom-right of the rapp's HTML
+      // so the user can save (export) the cartridge AND so the rapp's
+      // user-entered state survives a refresh of the popped-out window.
+      //
+      // Two pieces wired into the rapp's own document (no parent shell):
+      //   1. 💾 Save .rapp — snapshots document.documentElement.outerHTML
+      //      and triggers a download as <safeName>.rapp.html
+      //   2. ♻︎ Clear — wipes the per-rapp cache key and reloads
+      // Plus an auto-snapshot loop that persists every input/textarea/select
+      // value (and contenteditable html) into localStorage on input + before
+      // unload, restored on next DOMContentLoaded. Blob-URL popouts share
+      // the parent's origin, so the same localStorage is visible.
+      //
+      // The cache key is namespaced by rapp safeName so each cartridge has
+      // its own slot — Clear scopes precisely, never touches the brainstem's
+      // own keys (settings, chat history, agent storage, etc.).
+      function injectRappControls(html, name, id) {
+        const safeName = (name || id || 'rapplication').replace(/[^a-z0-9_-]+/gi, '-').toLowerCase();
+        const controls = `
+<div id="__rapp_ctrls__" style="position:fixed;bottom:14px;right:14px;z-index:2147483647;display:flex;gap:6px;font:600 11px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+  <button id="__rapp_save__"  type="button" style="background:rgba(13,17,23,0.92);color:#c9d1d9;border:1px solid #30363d;border-radius:6px;padding:7px 12px;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.4)" title="Download this rapplication as a .rapp.html file you can re-drop into the brainstem">💾 Save .rapp</button>
+  <button id="__rapp_clear__" type="button" style="background:rgba(13,17,23,0.92);color:#8b949e;border:1px solid #30363d;border-radius:6px;padding:7px 10px;cursor:pointer;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,0.4)" title="Clear this rapp's cached state and reload">♻︎</button>
+</div>
+<script>
+(function(){
+  var SAFE = ${JSON.stringify(safeName)};
+  var KEY  = '__rapp_state__:' + SAFE;
+
+  // ── State snapshot / restore ─────────────────────────────────────
+  function snapshot() {
+    try {
+      var inputs = {}, ce = [];
+      document.querySelectorAll('input,textarea,select').forEach(function(el, i){
+        var k = el.id || el.name || ('__i_' + i + '_' + el.tagName);
+        if (el.type === 'checkbox' || el.type === 'radio') inputs[k] = el.checked;
+        else inputs[k] = el.value;
+      });
+      document.querySelectorAll('[contenteditable=true],[contenteditable=""]').forEach(function(el){
+        if (el.id) ce.push({ id: el.id, html: el.innerHTML });
+      });
+      var snap = { inputs: inputs, ce: ce, scroll: [scrollX, scrollY], at: Date.now() };
+      localStorage.setItem(KEY, JSON.stringify(snap));
+    } catch (e) {}
+  }
+  function restore() {
+    try {
+      var raw = localStorage.getItem(KEY); if (!raw) return;
+      var snap = JSON.parse(raw); if (!snap || !snap.inputs) return;
+      document.querySelectorAll('input,textarea,select').forEach(function(el, i){
+        var k = el.id || el.name || ('__i_' + i + '_' + el.tagName);
+        if (k in snap.inputs) {
+          if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!snap.inputs[k];
+          else el.value = snap.inputs[k];
+          // Fire events so frameworks bound to inputs notice the change.
+          el.dispatchEvent(new Event('input',  { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+      (snap.ce || []).forEach(function(o){
+        var el = document.getElementById(o.id);
+        if (el) el.innerHTML = o.html;
+      });
+      if (snap.scroll) window.scrollTo(snap.scroll[0], snap.scroll[1]);
+    } catch (e) {}
+  }
+
+  function whenReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+    else fn();
+  }
+  whenReady(function(){
+    restore();
+    // Snapshot whenever an input changes, plus on tab close. Throttle the
+    // input handler so a fast-typing user doesn't hammer localStorage.
+    var t = 0;
+    document.addEventListener('input', function(){
+      clearTimeout(t); t = setTimeout(snapshot, 250);
+    }, true);
+    window.addEventListener('beforeunload', snapshot);
+    window.addEventListener('pagehide', snapshot);
+  });
+
+  // ── Save button ──────────────────────────────────────────────────
+  var save = document.getElementById('__rapp_save__');
+  if (save) save.addEventListener('click', function(e){
+    e.preventDefault(); e.stopPropagation();
+    try {
+      var clone = document.documentElement.cloneNode(true);
+      // Strip our own toolbar + script from the export so re-import is clean.
+      var ctrls = clone.querySelector('#__rapp_ctrls__'); if (ctrls) ctrls.remove();
+      clone.querySelectorAll('script').forEach(function(s){
+        if (/__rapp_save__|__rapp_clear__|__rapp_state__/.test(s.textContent || '')) s.remove();
+      });
+      var out = '<!doctype html>\\n' + clone.outerHTML;
+      var blob = new Blob([out], { type: 'text/html' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = SAFE + '.rapp.html';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      save.textContent = '✓ Saved';
+      setTimeout(function(){ save.textContent = '💾 Save .rapp'; }, 1600);
+    } catch (err) {
+      save.textContent = '⚠️ ' + (err && err.message || 'failed');
+    }
+  });
+
+  // ── Clear button ─────────────────────────────────────────────────
+  var clear = document.getElementById('__rapp_clear__');
+  if (clear) clear.addEventListener('click', function(){
+    if (!confirm('Clear cached state for this rapplication and reload?')) return;
+    try { localStorage.removeItem(KEY); } catch (_) {}
+    location.reload();
+  });
+})();
+<\/script>`;
+        if (/<\/body>/i.test(html)) {
+          return html.replace(/<\/body>/i, controls + '\n</body>');
+        }
+        return html + controls;
+      }
+
       // Rapplications are cartridges loaded into the iframe player. To get
       // around X-Frame-Options / CSP frame-ancestors blocks (which are why a
       // raw `iframe.src = url` to e.g. another GitHub Pages origin renders
@@ -1800,6 +1922,8 @@
           } else {
             html = `<!doctype html><html><head>${baseTag}</head><body>${html}</body></html>`;
           }
+          // Inject save/clear toolbar + cache-restore script before display.
+          html = injectRappControls(html, name, id);
           iframe.srcdoc = html;
           _rappFrameState = { id, name, url, html };
         } catch (e) {
@@ -1812,6 +1936,10 @@
       // base-tagged so relative asset URLs resolve to the source origin) via
       // a blob URL — popups won't accept srcdoc, but they happily load blob:.
       // After detaching we close the in-page frame so the chat is uncovered.
+      // Track popups so we can revoke their blob URLs only once the user
+      // closes them — needed because keeping the URL alive is what makes
+      // the in-popup Refresh button work (the browser refetches the blob).
+      const _rappPopups = new Set();
       window.popoutRappFrame = function() {
         if (!_rappFrameState || !_rappFrameState.html) return;
         const { name, id, html } = _rappFrameState;
@@ -1825,10 +1953,19 @@
           return;
         }
         try { win.document.title = name || id || 'Rapplication'; } catch (_) {}
-        // Revoke the blob URL after the new window has had a chance to load it.
-        // 60s is generous — most rapps load in <2s, and we can't safely revoke
-        // earlier without racing the popup's HTML parser.
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        // Don't revoke the blob URL on a timer — the user expects refresh
+        // inside the popped-out window to work. Instead, poll for the
+        // window closing and revoke then; this caps memory without
+        // breaking the refresh flow. 5s poll keeps the work tiny.
+        const entry = { win, blobUrl };
+        _rappPopups.add(entry);
+        const poll = setInterval(() => {
+          if (win.closed) {
+            URL.revokeObjectURL(blobUrl);
+            _rappPopups.delete(entry);
+            clearInterval(poll);
+          }
+        }, 5000);
         // Close the in-page frame — the user explicitly asked to detach,
         // and leaving it open hides the chat behind the modal.
         closeRappFrame();
@@ -1838,6 +1975,20 @@
         const iframe = document.getElementById('rf-iframe');
         iframe.removeAttribute('srcdoc');
         iframe.src = 'about:blank';
+      };
+      // Open a rapp from an in-memory HTML string (e.g. a .rapp.html dropped
+      // onto the brainstem). Skips the network fetch and goes straight to
+      // injection — the saved HTML already carries its own <base href> from
+      // the original openRappFrame run.
+      window.openRappFromHtml = function(name, id, html) {
+        document.getElementById('rf-name').textContent = name || id || 'Rapplication';
+        document.getElementById('rf-id').textContent = id ? `· ${id}` : '';
+        const iframe = document.getElementById('rf-iframe');
+        document.getElementById('rapp-frame').classList.add('open');
+        document.querySelectorAll('aside.open').forEach(a => a.classList.remove('open'));
+        const wired = injectRappControls(html, name, id);
+        iframe.srcdoc = wired;
+        _rappFrameState = { id: id || '', name: name || '', url: '', html: wired };
       };
       function escapeHtml(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
       document.addEventListener('keydown', e => {
@@ -5505,7 +5656,7 @@ function wireGlobalDropzone() {
     depth = 0;
     overlay.classList.remove('active');
     const files = Array.from(e.dataTransfer.files || []);
-    let pyCount = 0, eggCount = 0;
+    let pyCount = 0;
     for (const f of files) {
       const name = (f.name || '').toLowerCase();
       try {
@@ -5516,9 +5667,19 @@ function wireGlobalDropzone() {
         } else if (name.endsWith('.egg') || name.endsWith('.zip')) {
           const buf = await f.arrayBuffer();
           await ingestEggBuffer(buf, 'drop:' + f.name);
-          eggCount++;
+        } else if (name.endsWith('.rapp.html') || name.endsWith('.rapp') || name.endsWith('.html')) {
+          // Saved rapplication cartridge — re-launch in the iframe player.
+          // The user can immediately Pop out from there if they want.
+          const html = await f.text();
+          const stem = f.name.replace(/\.(rapp\.html|rapp|html)$/i, '');
+          if (typeof window.openRappFromHtml === 'function') {
+            window.openRappFromHtml(stem, stem, html);
+            showEggToast(`Loaded ${stem}`);
+          } else {
+            showEggToast('Rapplication player not initialized yet', true);
+          }
         } else {
-          showEggToast(`Skipped ${f.name} — only .py and .egg files`, true);
+          showEggToast(`Skipped ${f.name} — only .py / .egg / .rapp.html`, true);
         }
       } catch (err) {
         console.error('drop import failed:', err);
