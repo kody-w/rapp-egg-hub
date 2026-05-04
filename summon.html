@@ -3128,6 +3128,14 @@ async function bootBinder() {
     // fails — better a starter set than nothing.
   }
 
+  // Filenames we never want to keep across rehydrates — prior-version
+  // starters that have been renamed/replaced, plus the demo set.
+  const LEGACY_STARTERS = [
+    'save_memory_agent.py', 'recall_memory_agent.py',           // v2 → renamed
+    'hello_agent.py', 'dice_agent.py',                          // demo set
+    'weather_poet_agent.py', 'sloshtest_agent.py',
+  ];
+
   // Restore the binder if (a) one is saved AND (b) the starter version matches.
   // Bumping STARTER_VERSION forces existing users to receive the new starter set.
   const saved = LS.get('binder', null);
@@ -3135,11 +3143,18 @@ async function bootBinder() {
   const goodSave = saved && saved.schema === 'rapp-binder/1.0' && (saved.cards||[]).length > 0 && savedStarter === STARTER_VERSION;
   if (goodSave) {
     state.binder = saved;
+    // Even on a "good" save, scrub any legacy starters that snuck in via
+    // an older session — prevents stale @local/save_memory etc. from
+    // surfacing in the agents panel.
+    const before = state.binder.cards.length;
+    state.binder.cards = state.binder.cards.filter(c => !LEGACY_STARTERS.includes(c.filename));
+    if (state.binder.cards.length !== before) LS.set('binder', state.binder);
   } else {
-    // Preserve any user-imported cards (anything NOT in STARTER_AGENT_FILES) on rehydrate.
+    // Preserve any user-imported cards (anything NOT in the current
+    // STARTER_AGENT_FILES and not a prior-version starter we've replaced).
     const userCards = saved && saved.cards
       ? saved.cards.filter(c => !STARTER_AGENT_FILES.includes(c.filename) &&
-                                !['hello_agent.py','dice_agent.py','weather_poet_agent.py','sloshtest_agent.py'].includes(c.filename))
+                                !LEGACY_STARTERS.includes(c.filename))
       : [];
     state.binder = RAPP.Binder.empty('@local/you');
     for (const f of STARTER_AGENT_FILES) {
@@ -3161,12 +3176,11 @@ async function bootBinder() {
     LS.set('binder', state.binder);
     LS.set('starterVersion', STARTER_VERSION);
   }
-  // Restore hand
-  const handFiles = LS.get('hand', []);
-  state.hand = new Set(handFiles);
-  // Drop any hand entries that no longer exist
-  const have = new Set((state.binder.cards||[]).map(c => c.filename));
-  state.hand = new Set([...state.hand].filter(f => have.has(f)));
+  // No deck/hand distinction in the egg-hub vBrainstem — every agent in the
+  // binder is auto-loaded into the hand so there's no "in deck" middle state.
+  // Mirrors the local-mode behavior earlier in this function.
+  state.hand = new Set((state.binder.cards||[]).map(c => c.filename));
+  persistHand();
   renderBinder();
   renderHand();
   renderAgents();
@@ -6208,11 +6222,9 @@ async function ingestEggBuffer(buf, sourceLabel) {
     } catch (e) { console.warn('[egg] memory merge failed:', e.message); }
   }
 
-  // When summoning a twin, evict the generic RAPP starter agents from hand —
-  // their pills duplicate the twin's own cartridges and clutter mobile.
-  // (They stay in the binder for users who want them.)
-  for (const f of STARTER_AGENT_FILES) state.hand.delete(f);
-
+  // Every binder card is also a hand card in the egg-hub vBrainstem (no
+  // deck/hand split), so summoning leaves the existing starters in hand
+  // alongside the twin's bundled agents — the LLM can route to either.
   persistBinder(); persistHand();
   if (typeof renderBinder === 'function') renderBinder();
   if (typeof renderHand === 'function') renderHand();
@@ -6378,15 +6390,9 @@ window.importTwinEgg = importTwinEgg;
   // user has hatched a twin egg, that twin's cartridges replace the starters.
   restoreSummonedTwin();
   await applyEggDeepLink();
-  // Auto-load the RAPP starter set only when no twin is summoned. With a twin,
-  // the bundled cartridges are the canonical hand and the generic memory/HN
-  // starters would just clutter the pill row with duplicates.
-  if (!summonedTwin && state.hand.size === 0 && state.binder.cards.length > 0) {
-    for (const f of STARTER_AGENT_FILES) {
-      if (state.binder.cards.find(c => c.filename === f)) state.hand.add(f);
-    }
-    persistHand(); renderHand(); renderBinder(); renderAgents();
-  }
+  // bootBinder already auto-fills the hand with every binder card, so the
+  // legacy "auto-load only when hand is empty" branch is no longer needed.
+  // Egg-bundled agents from applyEggDeepLink also flow through state.hand.add.
   // When a twin is summoned (either freshly via ?egg= or restored from
   // localStorage), mark the body so the per-agent hand-pill CSS rule kicks in.
   // The 3 canonical starter prompts (Remember / What do / HN) remain the only
