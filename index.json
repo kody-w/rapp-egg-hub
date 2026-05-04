@@ -4,7 +4,7 @@
   "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-05-04T17:10:33Z",
+  "updated_at": "2026-05-04T17:11:37Z",
   "egg_count": 2,
   "eggs": [
     {
@@ -50,10 +50,10 @@
         "memory-equipped"
       ],
       "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 10401,
-      "sha256": "d5802147d89be7b5e1f5abcbb2632390f56a1b90b6244aa7f9078fbb69fa72e4",
+      "size_bytes": 10370,
+      "sha256": "d7cb38afe192be1353b9e426139f063ed5720cb92546ffe93b8f7d97c95aacd8",
       "packed_by": "@kody-w",
-      "packed_at": "2026-05-04T17:09:16Z",
+      "packed_at": "2026-05-04T17:11:31Z",
       "egg_path": "eggs/kody-w.egg",
       "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/kody-w.egg",
       "lineage": {
