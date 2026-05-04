@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rapp-egg-hub — public hub for digital-twin .egg cartridges</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --panel: rgba(20, 30, 48, 0.85);
+    --panel-hi: rgba(28, 42, 64, 0.92);
+    --border: rgba(141, 169, 196, 0.18);
+    --border-hi: rgba(95, 196, 255, 0.45);
+    --text: #eaf2fb;
+    --muted: #93a5bb;
+    --accent: #5fc4ff;
+    --accent-glow: rgba(95, 196, 255, 0.4);
+    --green: #8fd960;
+    --gold: #ffc857;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: linear-gradient(180deg, #0c1a2e 0%, #04080f 100%) fixed;
+    color: var(--text);
+    font: 15px/1.55 "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(circle 800px at 50% -200px, rgba(95, 196, 255, 0.18), transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    position: relative; z-index: 1;
+    padding: 60px 32px 30px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    margin: 0;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    background: linear-gradient(90deg, var(--accent), var(--green));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  header .tagline {
+    margin-top: 10px;
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 640px;
+    margin-left: auto; margin-right: auto;
+  }
+  header .nav {
+    margin-top: 22px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  header .nav a { margin: 0 12px; }
+
+  main {
+    position: relative; z-index: 1;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 36px 32px 80px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+    margin: 24px 0;
+  }
+  .egg-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    transition: border-color 0.15s, transform 0.15s;
+    cursor: pointer;
+  }
+  .egg-card:hover {
+    border-color: var(--border-hi);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(0,0,0,0.5), 0 0 24px rgba(95,196,255,0.15);
+  }
+  .egg-card .top {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 10px;
+  }
+  .egg-card .icon {
+    width: 48px; height: 48px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(95,196,255,0.15), rgba(95,196,255,0.03));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    border: 1px solid var(--border);
+  }
+  .egg-card h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    flex: 1;
+  }
+  .egg-card .kind {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(95,196,255,0.12);
+    color: var(--accent);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .egg-card .desc {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    margin-top: 8px;
+  }
+  .egg-card .meta {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    line-height: 1.5;
+    word-break: break-all;
+  }
+  .egg-card .meta span { color: var(--text); }
+
+  details {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 20px;
+    margin: 16px 0;
+  }
+  details > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--accent);
+    list-style: none;
+  }
+  details > summary::after { content: ' ▼'; font-size: 10px; color: var(--muted); }
+  details[open] > summary::after { content: ' ▲'; }
+
+  pre {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-size: 12.5px;
+    color: var(--text);
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+  h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    margin-top: 36px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 30px 16px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 60px;
+  }
+
+  .copy-btn {
+    background: rgba(95,196,255,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(95,196,255,0.3);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .copy-btn:hover { background: rgba(95,196,255,0.2); }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--panel-hi);
+    border: 1px solid var(--border-hi);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    opacity: 0; pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🥚 rapp-egg-hub</h1>
+  <p class="tagline">Public hub for digital-twin <code>.egg</code> cartridges. Pull any egg by URL, hatch it locally — your brainstem becomes the home of that twin in 30 seconds.</p>
+  <div class="nav">
+    <a href="https://github.com/kody-w/rapp-egg-hub">GitHub repo</a>
+    <a href="index.json">index.json</a>
+    <a href="https://github.com/kody-w/RAR">RAR (agent catalog)</a>
+    <a href="https://github.com/kody-w/rapp-installer">rapp-installer</a>
+  </div>
+</header>
+
+<main>
+
+<details open>
+  <summary>How to hatch any egg from this hub (3 commands)</summary>
+  <pre># 1. Install the brainstem (the static-ancestor substrate)
+curl -fsSL https://kody-w.github.io/rapp-installer/install.sh | bash
+
+# 2. Drop the Twin cartridge into agents/  (one curl)
+curl -fsSL https://raw.githubusercontent.com/kody-w/RAR/main/agents/@kody-w/twin_agent.py \
+     -o ~/.brainstem/src/rapp_brainstem/agents/twin_agent.py
+
+# 3. Boot the brainstem
+bash ~/.brainstem/src/rapp_brainstem/start.sh</pre>
+  <p>Then in the chat at <code>http://127.0.0.1:7071/</code>, paste:</p>
+  <pre>"Hatch the egg at <span style="color:var(--accent)">https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/grandma-rose.egg</span>, then boot her."</pre>
+  <p>The Twin agent fetches, unpacks into <code>~/.rapp/twins/&lt;rappid&gt;/</code>, and boots her on a fresh port. <strong>Same rappid as wherever she was packed</strong>; memory + mutations intact.</p>
+</details>
+
+<h2>Available eggs</h2>
+<div class="grid" id="eggs">
+  <!-- Populated by JS from index.json -->
+</div>
+
+<h2>Discovery API</h2>
+<p>The hub's catalog is plain JSON, no auth needed:</p>
+<pre>curl -s https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/index.json | jq .</pre>
+
+<h2>Contribute an egg</h2>
+<p>Pack a twin with the <code>Twin</code> agent (or any <code>brainstem-egg/2.x</code> packer), then PR it into <code>eggs/&lt;your-slug&gt;.egg</code> with a sidecar at <code>eggs/&lt;your-slug&gt;.json</code>. See <a href="README.md">README</a> for the schema.</p>
+
+</main>
+
+<div class="toast" id="toast">Copied!</div>
+
+<footer>
+  rapp-egg-hub · public catalog of digital-twin cartridges · <a href="https://github.com/kody-w/rapp-egg-hub">source</a>
+</footer>
+
+<script>
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+function fmtBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/(1024*1024)).toFixed(1) + ' MB';
+}
+
+function copy(text) {
+  navigator.clipboard.writeText(text).then(() => toast('Copied'));
+}
+
+const ICON_BY_KIND = {
+  memorial: '🕊️',
+  personal: '👤',
+  'pre-founder': '🚀',
+  project: '📋',
+  place: '📍',
+  custom: '🥚',
+};
+
+fetch('index.json').then(r => r.json()).then(catalog => {
+  const grid = document.getElementById('eggs');
+  if (!catalog.eggs || !catalog.eggs.length) {
+    grid.innerHTML = '<p style="color: var(--muted); padding: 20px;">No eggs yet. Be the first to contribute.</p>';
+    return;
+  }
+  grid.innerHTML = catalog.eggs.map(e => `
+    <div class="egg-card">
+      <div class="top">
+        <div class="icon">${ICON_BY_KIND[e.kind] || '🥚'}</div>
+        <h3>${e.display_name || e.name}</h3>
+        <span class="kind">${e.kind}</span>
+      </div>
+      <div class="desc">${e.description || ''}</div>
+      <div class="meta">
+        rappid: <span>${e.rappid_uuid || '?'}</span><br>
+        size:   <span>${fmtBytes(e.size_bytes)}</span><br>
+        sha256: <span>${(e.sha256 || '').slice(0, 16)}…</span><br>
+        packed_by: <span>${e.packed_by || '?'}</span> · <span>${(e.packed_at || '').slice(0, 10)}</span>
+      </div>
+      <button class="copy-btn" data-cmd="Hatch the egg at ${e.raw_url}, then boot it.">Copy chat command</button>
+      <button class="copy-btn" data-cmd="curl -fsSL ${e.raw_url} -o ~/Downloads/${e.slug}.egg">Copy curl recipe</button>
+    </div>
+  `).join('');
+  grid.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      copy(btn.dataset.cmd);
+    });
+  });
+});
+</script>
+
+</body>
+</html>

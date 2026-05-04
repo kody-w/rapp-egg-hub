@@ -1,0 +1,13 @@
+All Rights Reserved.
+
+The rapp-egg-hub repository structure (README, index.json schema,
+sidecar manifests, browseable index.html) is made available for
+inspection and personal use under the same terms as the upstream
+RAPP species root (https://github.com/kody-w/RAPP).
+
+Each individual .egg file in this hub inherits the license posture
+chosen by its original keeper — see the LICENSE file inside the
+egg's repo/ payload (unzip the .egg to find it). The hub itself
+makes no claim over individual egg contents.
+
+Copyright (c) 2026 Kody Wildfeuer.

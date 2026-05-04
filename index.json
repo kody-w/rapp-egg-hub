@@ -1,0 +1,39 @@
+{
+  "schema": "rapp-egg-hub/1.0",
+  "name": "rapp-egg-hub",
+  "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
+  "homepage": "https://kody-w.github.io/rapp-egg-hub/",
+  "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
+  "updated_at": "2026-05-04T16:52:50Z",
+  "egg_count": 1,
+  "eggs": [
+    {
+      "schema": "rapp-egg-hub-entry/1.0",
+      "slug": "grandma-rose",
+      "rappid_uuid": "0d51f2b3-7c2c-4f9a-8e5b-7f0c92ab4d7e",
+      "name": "grandma-rose",
+      "display_name": "Grandma Rose",
+      "kind": "memorial",
+      "description": "Memorial twin of Rose Mariana (1937\u20132024). Grandmother of three; kept a celebrated peony garden; ran the Tuesday knitting circle for 23 years. Family wants to remember her warmth, her dry humor, and her stories.",
+      "tags": [
+        "memorial",
+        "grandmother",
+        "demo",
+        "first-egg"
+      ],
+      "egg_schema": "brainstem-egg/2.1",
+      "size_bytes": 3382,
+      "sha256": "659aba41c41cec0e56ecbfc4148edbd6ec7c4b4dc5dc3a5e898b42ef9d7fbf7f",
+      "packed_by": "@kody-w",
+      "packed_at": "2026-05-04T16:49:36Z",
+      "egg_path": "eggs/grandma-rose.egg",
+      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/grandma-rose.egg",
+      "lineage": {
+        "parent_rappid": "37ad22f5-ed6d-48b1-b8b4-61019f58a42b",
+        "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
+      },
+      "memory_facts_count": 3,
+      "_note": "First egg in the hub \u2014 the seed that demonstrates the format."
+    }
+  ]
+}
