@@ -5961,6 +5961,9 @@ window.unsummonTwin = function() {
   summonedTwin = null;
   localStorage.removeItem('summoned_twin');
   renderSummonBanner();
+  // Restore the generic starter pill row — there's no twin to override it now.
+  const sp = document.getElementById('starter-prompts');
+  if (sp) sp.classList.remove('hidden');
   showEggToast('Twin unsummoned · back to generic brainstem');
 };
 
@@ -6031,10 +6034,18 @@ async function ingestEggBuffer(buf, sourceLabel) {
     } catch (e) { console.warn('[egg] memory merge failed:', e.message); }
   }
 
+  // When summoning a twin, evict the generic RAPP starter agents from hand —
+  // their pills duplicate the twin's own cartridges and clutter mobile.
+  // (They stay in the binder for users who want them.)
+  for (const f of STARTER_AGENT_FILES) state.hand.delete(f);
+
   persistBinder(); persistHand();
   if (typeof renderBinder === 'function') renderBinder();
   if (typeof renderHand === 'function') renderHand();
   if (typeof renderAgents === 'function') renderAgents();
+  // Hide the static starter-prompts row — twin's bundled hand pills replace it.
+  const sp = document.getElementById('starter-prompts');
+  if (sp) sp.classList.add('hidden');
 
   summonedTwin = {
     name: rappid.name || manifest.source?.name || 'twin',
@@ -6189,17 +6200,25 @@ window.importTwinEgg = importTwinEgg;
   // the existing #twin-panel if one already exists.
   initTwinPresence();
   await bootBinder();
-  // Auto-load all starter agents into the hand so the chat works immediately
-  if (state.hand.size === 0 && state.binder.cards.length > 0) {
+  // Restore + summon BEFORE auto-loading the generic RAPP starters — when the
+  // user has hatched a twin egg, that twin's cartridges replace the starters.
+  restoreSummonedTwin();
+  await applyEggDeepLink();
+  // Auto-load the RAPP starter set only when no twin is summoned. With a twin,
+  // the bundled cartridges are the canonical hand and the generic memory/HN
+  // starters would just clutter the pill row with duplicates.
+  if (!summonedTwin && state.hand.size === 0 && state.binder.cards.length > 0) {
     for (const f of STARTER_AGENT_FILES) {
       if (state.binder.cards.find(c => c.filename === f)) state.hand.add(f);
     }
     persistHand(); renderHand(); renderBinder(); renderAgents();
   }
-  // Restore previously-summoned twin (persona persists across reloads)
-  restoreSummonedTwin();
-  // Apply ?egg=<url> deep-link if present (mobile QR / hub link entry point)
-  await applyEggDeepLink();
+  // Hide the static starter-prompts row when a twin is summoned — the twin's
+  // bundled hand pills are what the user should see, not generic memory/HN.
+  if (summonedTwin) {
+    const sp = document.getElementById('starter-prompts');
+    if (sp) sp.classList.add('hidden');
+  }
   wire();
   installHeadlessConsoleApi();
   wireMicButton();
