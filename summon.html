@@ -1302,7 +1302,9 @@
     border: 6px dashed rgba(255,255,255,.5); border-radius: 16px; margin: 16px;
     pointer-events: none;
   }
+  #drop-overlay.active { display: flex; }
   #drop-overlay .icon { width: 64px; height: 64px; margin-bottom: 16px; }
+  #drop-overlay .hint { display:block; margin-top:8px; font-size:14px; font-weight:400; opacity:.85; }
 
   /* ── Mobile (≤720px) ─────────────────────────────────────────────
      Tightens the header, drops button labels in favor of icons, lets
@@ -1387,7 +1389,8 @@
 
 <div id="drop-overlay">
   <span class="icon"><svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg></span>
-  Drop .py agent file to install
+  Drop to hot-load
+  <span class="hint">.py agents are added to the binder + hand · .egg cartridges hatch the twin</span>
 </div>
 
 <header>
@@ -5297,11 +5300,19 @@ function escapeHtml(s) {
 }
 
 /* ───── Imports ──────────────────────────────────────────── */
-async function importPyFile(file) {
+async function importPyFile(file, opts) {
   const text = await file.text();
   const card = await RAPP.Card.mintCard(text, file.name);
-  RAPP.Binder.addCard(state.binder, card);
-  persistBinder(); renderBinder(); renderAgents();
+  // Idempotent: replace existing card with same filename
+  const existing = (state.binder.cards || []).findIndex(c => c.filename === card.filename);
+  if (existing >= 0) state.binder.cards[existing] = card;
+  else RAPP.Binder.addCard(state.binder, card);
+  // Auto-add to hand so the LLM can call it as a tool immediately,
+  // matching the local rapp-installer drag-drop UX.
+  if (!opts || opts.addToHand !== false) state.hand.add(card.filename);
+  persistBinder(); persistHand();
+  renderBinder(); renderAgents(); renderHand();
+  return card;
 }
 async function importCardJson(file) {
   const text = await file.text();
@@ -5336,6 +5347,64 @@ function downloadFile(name, content, mime) {
 }
 
 /* ───── Wire UI ────────────────────────────────────────── */
+/* Global drag-drop hot-load — drop a .py anywhere on the window to install
+ * the agent into the binder + hand (auto-loaded as a tool); drop a .egg to
+ * hatch a twin. Mirrors the rapp-installer local brainstem's drop UX.
+ *
+ * dragenter on document fires every time the cursor crosses a child's bounding
+ * box, then dragleave fires for the parent — we de-bounce with a counter so
+ * the overlay doesn't flicker. */
+function wireGlobalDropzone() {
+  const overlay = document.getElementById('drop-overlay');
+  if (!overlay) return;
+  let depth = 0;
+  const hasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
+
+  window.addEventListener('dragenter', (e) => {
+    if (!hasFiles(e)) return;
+    depth++;
+    overlay.classList.add('active');
+  });
+  window.addEventListener('dragleave', (e) => {
+    if (!hasFiles(e)) return;
+    depth = Math.max(0, depth - 1);
+    if (depth === 0) overlay.classList.remove('active');
+  });
+  window.addEventListener('dragover', (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();      // required to allow drop
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  window.addEventListener('drop', async (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    depth = 0;
+    overlay.classList.remove('active');
+    const files = Array.from(e.dataTransfer.files || []);
+    let pyCount = 0, eggCount = 0;
+    for (const f of files) {
+      const name = (f.name || '').toLowerCase();
+      try {
+        if (name.endsWith('.py')) {
+          const card = await importPyFile(f, { addToHand: true });
+          pyCount++;
+          showEggToast(`Hot-loaded ${card.filename}`);
+        } else if (name.endsWith('.egg') || name.endsWith('.zip')) {
+          const buf = await f.arrayBuffer();
+          await ingestEggBuffer(buf, 'drop:' + f.name);
+          eggCount++;
+        } else {
+          showEggToast(`Skipped ${f.name} — only .py and .egg files`, true);
+        }
+      } catch (err) {
+        console.error('drop import failed:', err);
+        showEggToast(`${f.name}: ${err.message}`, true);
+      }
+    }
+    if (pyCount > 1) showEggToast(`Hot-loaded ${pyCount} agents`);
+  });
+}
+
 function wire() {
   $('#btn-settings').addEventListener('click', () => openAside('settings'));
   $('#btn-agents').addEventListener('click',   () => openAside('agents'));
@@ -6226,6 +6295,7 @@ window.importTwinEgg = importTwinEgg;
   // quick-click pills; agents stay callable through the LLM tool layer.
   if (summonedTwin) document.body.setAttribute('data-twin-summoned', '');
   wire();
+  wireGlobalDropzone();
   installHeadlessConsoleApi();
   wireMicButton();
   setupA2HS();
