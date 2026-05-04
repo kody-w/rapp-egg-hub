@@ -1861,19 +1861,21 @@
     <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/></svg>
   </div>
 
-  <div class="msg system welcome">
+  <div class="msg system welcome" id="welcome-default">
     <div class="bubble">
-      <h2 class="virtual-only">Welcome to your RAPP Brainstem (virtual)</h2>
-      <h2 class="local-only">Welcome to your RAPP Brainstem</h2>
-      <p class="virtual-only">I'm the browser-only twin of the local brainstem. Same <code>/chat</code> envelope. Same single-file <code>*_agent.py</code> contract. Same GitHub identity as the rest of RAPP.</p>
-      <p class="local-only">I'm running on your machine — Flask on port 7071, powered by your GitHub Copilot subscription. Same single-file <code>*_agent.py</code> contract as the rest of RAPP. Agents run directly in the Python process here, not in the browser.</p>
+      <h2>Welcome to your vBrainstem</h2>
+      <p>A digital twin runtime running entirely in your browser — no install needed. Powered by GitHub Copilot.</p>
       <ul>
-        <li><strong>Sign in</strong> with the green button (top-right) to use your GitHub Copilot subscription.</li>
-        <li><strong>Binder</strong>: tap a card → "Play to hand" to hot-load that agent so I can call it.</li>
-        <li><strong>Agents</strong>: drag a <code>.py</code> file anywhere on this window to install a new tool.</li>
-        <li><strong>Install</strong>: get the real local brainstem with one curl command.</li>
+        <li><strong>Sign in</strong> via the ⚙️ icon (top-right) to start chatting with Copilot.</li>
+        <li><strong>Summon a twin</strong> from the <a href="./" target="_blank">egg hub</a> — its soul becomes my voice and its agents become my tools.</li>
+        <li><strong>Tap a starter prompt</strong> below to ask the first question.</li>
       </ul>
-      <p><em>Tap a card above the input to ask a starter prompt — each card calls its agent.</em></p>
+    </div>
+  </div>
+  <div class="msg system welcome" id="welcome-twin" hidden>
+    <div class="bubble">
+      <h2 id="welcome-twin-name">Chatting as your twin</h2>
+      <p id="welcome-twin-desc">The twin's soul is loaded as my voice. Sign in via the ⚙️ icon to begin, then tap a starter prompt or just type a message.</p>
     </div>
   </div>
 </div>
@@ -2123,8 +2125,8 @@
     </div>
   </div>
 </div>
-<button id="a2hs-banner" class="a2hs-banner" hidden type="button" aria-label="Install Brainstem">
-  <span aria-hidden="true">📲</span> Install Brainstem
+<button id="a2hs-banner" class="a2hs-banner" hidden type="button" aria-label="Add to home screen">
+  <span aria-hidden="true">📲</span> Add to home screen
 </button>
 
 <script src="./rapp.js"></script>
@@ -6016,9 +6018,29 @@ function ensureSummonBanner() {
   return b;
 }
 
+function renderTwinWelcome() {
+  const def = document.getElementById('welcome-default');
+  const tw  = document.getElementById('welcome-twin');
+  if (!def || !tw) return;
+  if (summonedTwin) {
+    def.hidden = true;
+    tw.hidden = false;
+    const n = document.getElementById('welcome-twin-name');
+    const d = document.getElementById('welcome-twin-desc');
+    if (n) n.textContent = `Chatting as ${summonedTwin.display_name}`;
+    if (d) {
+      const desc = (summonedTwin.rappid && summonedTwin.rappid.description) ? ` — ${summonedTwin.rappid.description}` : '';
+      d.innerHTML = `The twin's soul is loaded as my voice${desc ? `: <em>${escapeHtml(desc.trim())}</em>` : ''}. Sign in via the ⚙️ icon to begin, then tap a starter prompt or just type a message.`;
+    }
+  } else {
+    def.hidden = false;
+    tw.hidden = true;
+  }
+}
+
 function renderSummonBanner() {
   const b = ensureSummonBanner();
-  if (!summonedTwin) { b.remove(); return; }
+  if (!summonedTwin) { b.remove(); renderTwinWelcome(); return; }
   const kindIcon = ({ memorial:'🕊️', personal:'👤', 'pre-founder':'🚀', project:'📋', place:'📍' })[summonedTwin.rappid?.kind] || '🥚';
   b.innerHTML = `
     <span style="font-size:16px">${kindIcon}</span>
@@ -6029,6 +6051,7 @@ function renderSummonBanner() {
       <a href="javascript:void(unsummonTwin())" style="color:#8b949e;text-decoration:none;font-weight:400" title="Clear twin persona">unsummon</a>
     </span>
   `;
+  renderTwinWelcome();
 }
 
 function escapeHtml(s) {
