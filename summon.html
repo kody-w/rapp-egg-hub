@@ -147,12 +147,14 @@
   }
   #rapp-frame .rf-title { display: flex; align-items: center; gap: 8px; font-weight: 600; }
   #rapp-frame .rf-title .rf-id { color: #6e7681; font-family: "SF Mono", monospace; font-size: 10px; font-weight: 400; }
-  #rapp-frame .rf-close {
+  #rapp-frame .rf-close, #rapp-frame .rf-popout {
     background: transparent; border: 1px solid #30363d;
     color: #c9d1d9; padding: 3px 10px; border-radius: 4px;
     font-size: 11px; cursor: pointer;
   }
   #rapp-frame .rf-close:hover { border-color: #f85149; color: #f85149; }
+  #rapp-frame .rf-popout:hover { border-color: #58a6ff; color: #58a6ff; }
+  #rapp-frame .rf-actions { display: flex; gap: 6px; }
   #rapp-frame iframe {
     flex: 1; width: 100%; height: 100%; border: none; background: #fff;
   }
@@ -1761,6 +1763,11 @@
       // close-button in the overlay markup can call it. Same shape as the
       // local brainstem's openRappFrame/closeRappFrame so a user moving
       // between pages sees identical behavior.
+      // Track the most-recent rapp so the Pop-out button can re-launch the
+      // SAME rendered HTML in a new window (it would be wasteful to refetch
+      // and racy to drop the user back to "Loading…").
+      let _rappFrameState = null;
+
       // Rapplications are cartridges loaded into the iframe player. To get
       // around X-Frame-Options / CSP frame-ancestors blocks (which are why a
       // raw `iframe.src = url` to e.g. another GitHub Pages origin renders
@@ -1794,9 +1801,37 @@
             html = `<!doctype html><html><head>${baseTag}</head><body>${html}</body></html>`;
           }
           iframe.srcdoc = html;
+          _rappFrameState = { id, name, url, html };
         } catch (e) {
           iframe.srcdoc = `<html><body style="margin:0;background:#0d1117;color:#f85149;font:14px -apple-system,sans-serif;padding:24px"><h2 style="margin:0 0 12px">Couldn't load ${escapeHtml(name || id || 'rapp')}</h2><p>${escapeHtml(e.message)}</p><p style="color:#8b949e;font-size:12px;margin-top:24px">Source: <code>${escapeHtml(url)}</code></p></body></html>`;
+          _rappFrameState = null;
         }
+      };
+      // Detach the running rapp into a standalone window so the user can keep
+      // chatting while it works. We re-emit the SAME rendered HTML (already
+      // base-tagged so relative asset URLs resolve to the source origin) via
+      // a blob URL — popups won't accept srcdoc, but they happily load blob:.
+      // After detaching we close the in-page frame so the chat is uncovered.
+      window.popoutRappFrame = function() {
+        if (!_rappFrameState || !_rappFrameState.html) return;
+        const { name, id, html } = _rappFrameState;
+        const blob = new Blob([html], { type: 'text/html' });
+        const blobUrl = URL.createObjectURL(blob);
+        const features = 'noopener=no,popup=yes,width=1024,height=800';
+        const win = window.open(blobUrl, '_blank', features);
+        if (!win) {
+          alert('Popup blocked. Allow popups for this site to detach the rapp.');
+          URL.revokeObjectURL(blobUrl);
+          return;
+        }
+        try { win.document.title = name || id || 'Rapplication'; } catch (_) {}
+        // Revoke the blob URL after the new window has had a chance to load it.
+        // 60s is generous — most rapps load in <2s, and we can't safely revoke
+        // earlier without racing the popup's HTML parser.
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        // Close the in-page frame — the user explicitly asked to detach,
+        // and leaving it open hides the chat behind the modal.
+        closeRappFrame();
       };
       window.closeRappFrame = function() {
         document.getElementById('rapp-frame').classList.remove('open');
@@ -1882,7 +1917,10 @@
       <span id="rf-name">Rapplication</span>
       <span class="rf-id" id="rf-id"></span>
     </div>
-    <button class="rf-close" onclick="closeRappFrame()">✕ Close</button>
+    <div class="rf-actions">
+      <button class="rf-popout" onclick="popoutRappFrame()" title="Open in a new window so you can keep using chat">⧉ Pop out</button>
+      <button class="rf-close" onclick="closeRappFrame()">✕ Close</button>
+    </div>
   </div>
   <iframe id="rf-iframe" title="Rapplication UI"></iframe>
 </div>
