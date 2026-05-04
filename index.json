@@ -4,8 +4,8 @@
   "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-05-04T16:52:50Z",
-  "egg_count": 1,
+  "updated_at": "2026-05-04T17:04:08Z",
+  "egg_count": 2,
   "eggs": [
     {
       "schema": "rapp-egg-hub-entry/1.0",
@@ -31,9 +31,35 @@
       "lineage": {
         "parent_rappid": "37ad22f5-ed6d-48b1-b8b4-61019f58a42b",
         "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
-      },
-      "memory_facts_count": 3,
-      "_note": "First egg in the hub \u2014 the seed that demonstrates the format."
+      }
+    },
+    {
+      "schema": "rapp-egg-hub-entry/1.0",
+      "slug": "kody-wildfeuer",
+      "rappid_uuid": "1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f",
+      "name": "kody-wildfeuer",
+      "display_name": "Kody Wildfeuer",
+      "kind": "personal",
+      "description": "Public-facing digital twin of Kody Wildfeuer (@kody-w). Built from his open-source manifestos, RAPP constitution, Wildhaven manifest, and architecture notes. The voice and convictions he projects through his public work \u2014 not Kody himself.",
+      "tags": [
+        "personal",
+        "founder",
+        "rapp",
+        "wildhaven",
+        "self",
+        "kody"
+      ],
+      "egg_schema": "brainstem-egg/2.1",
+      "size_bytes": 6455,
+      "sha256": "1c0de3d19d21d456d027fd7a8bb8ab8c13eb3ec3c23c030943d3d0f06e464045",
+      "packed_by": "@kody-w",
+      "packed_at": "2026-05-04T17:04:02Z",
+      "egg_path": "eggs/kody-wildfeuer.egg",
+      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/kody-wildfeuer.egg",
+      "lineage": {
+        "parent_rappid": "37ad22f5-ed6d-48b1-b8b4-61019f58a42b",
+        "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
+      }
     }
   ]
 }

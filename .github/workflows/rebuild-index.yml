@@ -1,0 +1,46 @@
+name: rebuild-index
+
+# Regenerate index.json whenever an egg is added/changed under eggs/.
+# Idempotent — only commits if the rebuild produces a different index.json.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "eggs/**"
+      - "scripts/rebuild_index.py"
+      - ".github/workflows/rebuild-index.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Rebuild index.json
+        run: python3 scripts/rebuild_index.py
+
+      - name: Commit if changed
+        run: |
+          if [[ -n "$(git status --porcelain index.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add index.json
+            git commit -m "rebuild: regenerate index.json (auto)"
+            git push
+          else
+            echo "[rebuild] index.json unchanged — no commit"
+          fi
