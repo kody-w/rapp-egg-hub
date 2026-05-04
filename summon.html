@@ -18,6 +18,8 @@
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <!-- Marked — soul.md rendering -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<!-- PeerJS — WebRTC handshake for the multi-device tether group chat -->
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html { height: 100%; }
@@ -92,6 +94,20 @@
     font-size: 11px; transition: all .15s;
     text-decoration: none; font-family: inherit;
   }
+  /* Tether: live-room indicator on the header button */
+  .tether-status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #3fb950; animation: pulse 2s infinite;
+    margin-left: 2px;
+  }
+  body[data-tether="connected"] #btn-tether { color: #3fb950; border-color: rgba(63,185,80,.4); }
+  body[data-tether="connected"] #tether-status-dot { display: inline-block !important; }
+  /* Remote-peer message styling — distinct from local user/assistant bubbles */
+  .msg.peer .bubble {
+    background: rgba(88,166,255,.08);
+    border-color: rgba(88,166,255,.35);
+  }
+  .msg.peer .role-label { color: #58a6ff; }
   .icon-btn:hover { border-color: #58a6ff; color: #58a6ff; }
   .icon-btn.active { border-color: #3fb950; color: #3fb950; background: rgba(63,185,80,.08); }
   .icon-btn.green { border-color: #3fb950; color: #3fb950; }
@@ -1410,6 +1426,11 @@
       Sign in with GitHub
     </button>
 
+    <button class="icon-btn" id="btn-tether" title="Tether — group chat across devices over a WebRTC DataChannel">
+      <span class="icon"><svg viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg></span>
+      <span class="tether-status-dot" id="tether-status-dot" style="display:none"></span>
+      Tether
+    </button>
     <button class="icon-btn" id="btn-browse" title="Browse the agent registry (RAR + custom sources)">
       <span class="icon"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg></span>
       Browse
@@ -2138,6 +2159,55 @@
 </footer>
 
 <!-- Copilot sign-in modal — device-code flow via worker -->
+<!-- Tether modal — N-peer group chat over WebRTC DataChannel via PeerJS.
+     Host generates a peer ID + QR; any number of others scan/paste to
+     join. Host rebroadcasts every chat envelope to all members; each
+     peer's twin participates as itself. -->
+<div class="modal" id="tether-modal">
+  <div class="panel" style="max-width:520px">
+    <header><span class="ttl">🔗 Tether — group chat</span><button class="close" id="tether-close">×</button></header>
+    <div class="body">
+      <div id="tether-error" class="banner warn" hidden></div>
+
+      <div id="tether-mode-pick">
+        <p style="font-size:13px;color:#8b949e;margin-bottom:14px">
+          Open a room and others scan the QR to join — phone, laptop, Mac, Windows, anything with a browser. Each peer brings their own twin into the same chat. Close this tab to leave the room.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn primary" id="tether-host-btn" style="flex:1;min-width:160px;padding:12px">📡 Open a room</button>
+          <button class="btn"         id="tether-join-btn" style="flex:1;min-width:160px;padding:12px">🔍 Join existing</button>
+        </div>
+      </div>
+
+      <div id="tether-host" hidden>
+        <p style="font-size:13px;color:#8b949e;margin-bottom:8px">Scan from another device, or copy the link:</p>
+        <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:14px;text-align:center;margin-bottom:10px">
+          <img id="tether-qr" alt="Tether QR" style="width:200px;height:200px;background:#fff;border-radius:6px;display:block;margin:0 auto 10px">
+          <button type="button" id="tether-copy-link" style="background:rgba(63,185,80,.12);color:#3fb950;border:1px solid rgba(63,185,80,.3);padding:6px 14px;border-radius:6px;font:600 12px -apple-system,sans-serif;cursor:pointer">📋 Copy invite link</button>
+        </div>
+        <div id="tether-room-status" style="font-size:12px;color:#8b949e;text-align:center;margin-bottom:8px">…waiting for handshake</div>
+        <div id="tether-members" style="margin-top:6px"></div>
+      </div>
+
+      <div id="tether-join" hidden>
+        <p style="font-size:13px;color:#8b949e;margin-bottom:8px">Paste the invite link or peer ID from the host:</p>
+        <input id="tether-join-input" type="text" placeholder="kody-w.github.io/rapp-egg-hub/summon.html?join=… or just the peer ID" style="width:100%;background:#0d1117;border:1px solid #30363d;border-radius:6px;color:#c9d1d9;padding:10px;font:13px ui-monospace,Menlo,monospace;margin-bottom:10px">
+        <button class="btn primary" id="tether-join-go" style="width:100%;padding:10px">Join room →</button>
+        <div id="tether-join-status" style="font-size:12px;color:#8b949e;text-align:center;margin-top:10px"></div>
+      </div>
+
+      <div id="tether-connected" hidden>
+        <div style="background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.3);border-radius:8px;padding:12px;margin-bottom:10px">
+          <div style="font-weight:600;color:#3fb950;font-size:13px;margin-bottom:4px">✓ In the room</div>
+          <div style="color:#8b949e;font-size:12px" id="tether-room-info">…</div>
+        </div>
+        <div id="tether-members-connected" style="margin-bottom:10px"></div>
+        <button class="btn" id="tether-leave" style="width:100%">Leave room</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="cpsignin-modal">
   <div class="panel" style="max-width:480px">
     <header><span class="ttl">🔐 Sign in with GitHub Copilot</span><button class="close" id="cpsignin-close">×</button></header>
@@ -5621,6 +5691,486 @@ function downloadFile(name, content, mime) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/* ═════════════════════════════════════════════════════════════════════
+   TETHER — N-peer group chat over a WebRTC DataChannel via PeerJS.
+   ─────────────────────────────────────────────────────────────────────
+   • Star topology: the host accepts unbounded join connections and
+     rebroadcasts every chat envelope to every member (minus echo).
+     Joiners only hold a connection to the host.
+   • Identity: each browser persists a pair { rappid, name }. The rappid
+     is a UUID minted once, the name is prompted on first tether use.
+     Both ride along in every envelope so the chat surfaces "<name>"
+     and the room can deduplicate by rappid.
+   • Twin participation: when this peer has summoned a twin, that twin's
+     display_name is broadcast in the handshake so other members know
+     who's at the table. The twin replies via the existing chat loop;
+     responses flow back through the channel as role:'assistant'.
+   • Anti-talkover: only the local twin auto-replies to a remote message;
+     incoming assistant messages from peers never trigger another LLM call.
+   ═════════════════════════════════════════════════════════════════════ */
+const TETHER_IDENTITY_KEY = 'tether_identity_v1';
+const TETHER_VERSION = 'tether/1.0';
+
+const tether = {
+  peer: null,             // PeerJS peer
+  myPeerId: null,
+  identity: null,         // { rappid, name }
+  isHost: false,
+  hostConn: null,         // when joined: connection back to host
+  members: new Map(),     // peerId → { rappid, name, twinName, conn? }
+  active: false,
+};
+
+// Identity precedence:
+//   1. The summoned twin's rappid (from repo/rappid.json) — so two devices
+//      that have summoned the same egg share an identity, forming a "swarm"
+//      of that twin distributed across devices.
+//   2. A persistent personal rappid (minted once per browser, stored).
+// In both cases the human-readable `name` is the user's choice for the
+// tether session, prompted on first use.
+function tetherIdentity() {
+  // Always pick up the latest twin rappid in case it was summoned after
+  // the identity was first cached this session.
+  const twinRappid = summonedTwin?.rappid?.rappid;
+  if (tether.identity) {
+    if (twinRappid && tether.identity._source === 'twin' && tether.identity.rappid !== twinRappid) {
+      tether.identity = { ...tether.identity, rappid: twinRappid, _source: 'twin' };
+      try { localStorage.setItem(TETHER_IDENTITY_KEY, JSON.stringify(tether.identity)); } catch (_) {}
+    }
+    return tether.identity;
+  }
+  try {
+    const raw = localStorage.getItem(TETHER_IDENTITY_KEY);
+    if (raw) {
+      const id = JSON.parse(raw);
+      if (id && id.rappid && id.name) {
+        // If a twin is now summoned, prefer its rappid for swarm linkage.
+        if (twinRappid) { id.rappid = twinRappid; id._source = 'twin'; }
+        tether.identity = id;
+        return id;
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+function persistTetherIdentity(id) {
+  tether.identity = id;
+  try { localStorage.setItem(TETHER_IDENTITY_KEY, JSON.stringify(id)); } catch (_) {}
+}
+async function ensureTetherIdentity() {
+  const existing = tetherIdentity();
+  if (existing) return existing;
+  const twinRappid = summonedTwin?.rappid?.rappid;
+  const promptHint = twinRappid
+    ? `Joining as ${summonedTwin.display_name}. Pick a device handle (e.g. "Kody · phone"):`
+    : 'Pick a display name for the tether (others will see this):';
+  const name = (window.prompt(promptHint, '') || '').trim();
+  if (!name) return null;
+  const rappid = twinRappid || (crypto.randomUUID ? crypto.randomUUID()
+                : 'r-' + Math.random().toString(36).slice(2, 14));
+  const id = { rappid, name, _source: twinRappid ? 'twin' : 'personal' };
+  persistTetherIdentity(id);
+  return id;
+}
+
+function tetherEnsurePeer() {
+  if (tether.peer && !tether.peer.destroyed) return tether.peer;
+  if (typeof Peer === 'undefined') {
+    showEggToast('PeerJS failed to load — check your network.', true);
+    return null;
+  }
+  // PeerJS default broker (peerjs.com) handles handshake-only; once the
+  // DataChannel is open, all traffic is P2P-encrypted via DTLS.
+  tether.peer = new Peer();
+  tether.peer.on('open', (id) => { tether.myPeerId = id; });
+  tether.peer.on('connection', onIncomingPeerConnection);
+  tether.peer.on('error', (err) => {
+    console.warn('[tether] peer error:', err.type, err.message);
+    showEggToast('Tether: ' + err.type, true);
+  });
+  return tether.peer;
+}
+
+async function tetherWaitForId() {
+  if (tether.myPeerId) return tether.myPeerId;
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('PeerJS broker timeout')), 12000);
+    tether.peer.on('open', (id) => { clearTimeout(t); resolve(id); });
+  });
+}
+
+function onIncomingPeerConnection(conn) {
+  // Host-side only: a new joiner is dialing in.
+  conn.on('open', () => {
+    // Wait for their hello before adding to roster.
+  });
+  conn.on('data', (env) => onHostReceive(conn, env));
+  conn.on('close', () => onMemberLeave(conn.peer));
+  conn.on('error', (e) => console.warn('[tether] conn error:', e));
+}
+
+function broadcast(env, exceptPeerId) {
+  if (!tether.isHost) return;
+  for (const [pid, m] of tether.members) {
+    if (pid === exceptPeerId || !m.conn) continue;
+    try { m.conn.send(env); } catch (e) { console.warn('[tether] send failed:', e); }
+  }
+}
+
+function onHostReceive(conn, env) {
+  if (!env || !env.type) return;
+  if (env.type === 'hello') {
+    // Add to roster
+    tether.members.set(conn.peer, {
+      rappid: env.rappid, name: env.name, twinName: env.twinName, conn,
+    });
+    // Send the joiner the current roster + everyone else gets a notice
+    try {
+      conn.send({ type: 'roster', members: rosterArray() });
+    } catch (_) {}
+    broadcast({
+      type: 'system', text: `${env.name} joined`, at: Date.now(),
+    }, conn.peer);
+    appendTetherSystem(`${env.name} joined`);
+    renderTetherPanels();
+    return;
+  }
+  if (env.type === 'msg') {
+    // Rebroadcast to every other member
+    broadcast(env, conn.peer);
+    handleRemoteMessage(env);
+    return;
+  }
+}
+
+function onMemberLeave(peerId) {
+  const m = tether.members.get(peerId);
+  tether.members.delete(peerId);
+  if (m) {
+    broadcast({ type: 'system', text: `${m.name} left`, at: Date.now() }, peerId);
+    appendTetherSystem(`${m.name} left`);
+  }
+  renderTetherPanels();
+}
+
+function rosterArray() {
+  const me = tetherIdentity();
+  const arr = [{ peerId: tether.myPeerId, rappid: me.rappid, name: me.name, twinName: summonedTwin?.display_name || null, host: true }];
+  for (const [pid, m] of tether.members) {
+    arr.push({ peerId: pid, rappid: m.rappid, name: m.name, twinName: m.twinName, host: false });
+  }
+  return arr;
+}
+
+function handleRemoteMessage(env) {
+  if (!env || env.type !== 'msg') return;
+  // Append to the visible chat as a peer message — distinct styling.
+  const label = env.role === 'assistant' && env.twinName
+    ? `${env.twinName} (${env.from})`
+    : env.from || 'peer';
+  const pseudoRole = 'peer';
+  if (typeof appendMsg === 'function') {
+    appendMsg(pseudoRole, `**${label}:** ${env.content}`);
+  }
+  // Log into conversation_history so my twin sees the room context.
+  if (state && state.conversation_history) {
+    state.conversation_history.push({ role: 'user', content: `[${label}] ${env.content}` });
+  }
+  // Auto-respond ONLY if this was a user message AND I have a twin summoned
+  // AND my twin's name is mentioned (or it's the first reply in the room).
+  if (env.role === 'user' && summonedTwin && summonedTwin.display_name) {
+    const mine = summonedTwin.display_name.toLowerCase();
+    const text = (env.content || '').toLowerCase();
+    if (text.includes(mine) || text.includes(`@${mine.replace(/\s+/g, '')}`)) {
+      tetherTwinAutoRespond(env);
+    }
+  }
+}
+
+let _tetherTwinBusy = false;
+async function tetherTwinAutoRespond(env) {
+  if (_tetherTwinBusy) return;
+  _tetherTwinBusy = true;
+  try {
+    if (typeof chatLoop !== 'function') return;
+    const resp = await chatLoop(`[${env.from} asked the room] ${env.content}`);
+    if (typeof appendMsg === 'function') appendMsg('assistant', resp.text, resp.agent_logs);
+    state.conversation_history.push({ role: 'assistant', content: resp.text });
+    // Broadcast my twin's reply back into the room
+    const me = tetherIdentity();
+    const out = {
+      type: 'msg', role: 'assistant',
+      from: me.name, rappid: me.rappid,
+      twinName: summonedTwin?.display_name || null,
+      content: resp.text, at: Date.now(),
+    };
+    if (tether.isHost) broadcast(out);
+    else if (tether.hostConn) tether.hostConn.send(out);
+  } catch (e) {
+    console.warn('[tether] auto-respond failed:', e);
+  } finally {
+    _tetherTwinBusy = false;
+  }
+}
+
+function appendTetherSystem(text) {
+  if (typeof appendMsg === 'function') appendMsg('system', `🔗 ${text}`);
+}
+
+// Joiner-side: messages broadcast by the host
+function onJoinerReceive(env) {
+  if (!env || !env.type) return;
+  if (env.type === 'roster') {
+    tether.members = new Map();
+    for (const m of env.members) {
+      if (m.peerId !== tether.myPeerId) tether.members.set(m.peerId, m);
+    }
+    renderTetherPanels();
+    return;
+  }
+  if (env.type === 'system') { appendTetherSystem(env.text); return; }
+  if (env.type === 'msg')    { handleRemoteMessage(env); return; }
+}
+
+async function tetherStartHost() {
+  const id = await ensureTetherIdentity(); if (!id) return;
+  tetherEnsurePeer();
+  await tetherWaitForId();
+  tether.isHost = true;
+  tether.active = true;
+  document.body.setAttribute('data-tether', 'connected');
+  // Build invite URL — full summon.html?join=<peerId> so QR goes straight to the page
+  const inviteUrl = `${location.origin}${location.pathname}?join=${encodeURIComponent(tether.myPeerId)}`;
+  const qr = document.getElementById('tether-qr');
+  if (qr) qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteUrl)}`;
+  const status = document.getElementById('tether-room-status');
+  if (status) status.textContent = `Room open · waiting for joiners · you are ${id.name}`;
+  document.getElementById('tether-mode-pick').hidden = true;
+  document.getElementById('tether-host').hidden = false;
+  // Wire copy
+  const copyBtn = document.getElementById('tether-copy-link');
+  if (copyBtn && !copyBtn._wired) {
+    copyBtn._wired = true;
+    copyBtn.addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(inviteUrl); copyBtn.textContent = '✓ Copied'; setTimeout(()=>copyBtn.textContent='📋 Copy invite link',1600); }
+      catch (_) {}
+    });
+  }
+  renderTetherPanels();
+  appendTetherSystem(`Room opened — share the QR. You're ${id.name}.`);
+}
+
+async function tetherJoin(hostPeerId) {
+  const id = await ensureTetherIdentity(); if (!id) return;
+  tetherEnsurePeer();
+  await tetherWaitForId();
+  tether.isHost = false;
+  const conn = tether.peer.connect(hostPeerId, { reliable: true });
+  const status = document.getElementById('tether-join-status');
+  if (status) status.textContent = 'Connecting…';
+  conn.on('open', () => {
+    tether.hostConn = conn;
+    tether.active = true;
+    document.body.setAttribute('data-tether', 'connected');
+    conn.send({
+      type: 'hello',
+      version: TETHER_VERSION,
+      rappid: id.rappid, name: id.name,
+      twinName: summonedTwin?.display_name || null,
+      at: Date.now(),
+    });
+    if (status) status.textContent = '✓ Connected';
+    document.getElementById('tether-join').hidden = true;
+    document.getElementById('tether-connected').hidden = false;
+    appendTetherSystem(`Connected as ${id.name}.`);
+    renderTetherPanels();
+  });
+  conn.on('data', onJoinerReceive);
+  conn.on('close', () => {
+    tether.active = false;
+    document.body.removeAttribute('data-tether');
+    appendTetherSystem('Host disconnected — left the room.');
+    tether.hostConn = null;
+    renderTetherPanels();
+  });
+  conn.on('error', (e) => {
+    if (status) status.textContent = '⚠️ ' + (e.type || e.message || 'connection error');
+  });
+}
+
+function tetherLeave() {
+  try { tether.hostConn?.close(); } catch (_) {}
+  for (const [, m] of tether.members) { try { m.conn?.close(); } catch (_) {} }
+  tether.members.clear();
+  tether.active = false;
+  tether.isHost = false;
+  tether.hostConn = null;
+  document.body.removeAttribute('data-tether');
+  document.getElementById('tether-modal')?.classList.remove('open');
+  appendTetherSystem('Left the room.');
+}
+
+function renderTetherPanels() {
+  const status = document.getElementById('tether-room-status');
+  const list = document.getElementById('tether-members');
+  const list2 = document.getElementById('tether-members-connected');
+  const me = tetherIdentity();
+  const members = me ? rosterArray() : [];
+  // Group members by rappid — same rappid = same twin distributed across
+  // devices ("swarm"). Each rappid group renders as one entity with N device
+  // handles underneath. Different rappids are separate entities.
+  const swarms = new Map();
+  for (const m of members) {
+    const key = m.rappid || m.peerId;
+    if (!swarms.has(key)) swarms.set(key, []);
+    swarms.get(key).push(m);
+  }
+  let html = '';
+  if (!swarms.size) {
+    html = '<div style="font:12px -apple-system,sans-serif;color:#8b949e">no peers yet</div>';
+  } else {
+    for (const [, devices] of swarms) {
+      const isSwarm = devices.length > 1;
+      const head = devices.find(d => d.host) || devices[0];
+      const twin = head.twinName ? ` · twin <em>${head.twinName}</em>` : '';
+      const swarmTag = isSwarm ? ` <span style="color:#b58ddf">⛓ swarm · ${devices.length} devices</span>` : '';
+      const deviceList = isSwarm
+        ? `<div style="margin:4px 0 0 14px;font:11px ui-monospace,monospace;color:#8b949e">` +
+          devices.map(d => `${d.host?'👑 ':'• '}${d.name}`).join('<br>') +
+          `</div>`
+        : '';
+      const handle = `<strong>${head.twinName || head.name || '?'}</strong>`;
+      html += `<div style="font:12px ui-monospace,monospace;color:#c9d1d9;padding:4px 0">${head.host && !isSwarm ? '👑 ' : ''}${handle}${!isSwarm ? ' · ' + (head.name || '') : ''}${twin}${swarmTag}${deviceList}</div>`;
+    }
+  }
+  const heading = '<div style="font-size:11px;color:#6e7681;margin-bottom:4px">Members (' + members.length + (swarms.size && swarms.size !== members.length ? ' · ' + swarms.size + ' entit' + (swarms.size === 1 ? 'y' : 'ies') : '') + ')</div>';
+  if (list)  list.innerHTML  = heading + html;
+  if (list2) list2.innerHTML = heading + html;
+  if (status && tether.isHost) {
+    status.textContent = members.length > 1
+      ? `Room open · ${members.length - 1} joined`
+      : 'Room open · waiting for joiners';
+  }
+}
+
+// Hook into the local user's outbound chat so every message they type also
+// goes out to the room (when tethered). Patches chatLoop's caller path:
+// we wrap sendChat to broadcast the user's text after it's locally
+// appended, and wrap the post-LLM step so the assistant's reply also
+// goes out. Both paths are applied on top of the existing chat loop;
+// we don't fork it.
+function tetherInstallChatHooks() {
+  if (typeof window.sendChat === 'function' && !window.sendChat._tetherWrapped) {
+    const origSend = window.sendChat;
+    const wrapped = async function(...args) {
+      // Capture the input BEFORE sendChat clears it.
+      const inputEl = document.getElementById('input');
+      const text = (inputEl && inputEl.value || '').trim();
+      const result = await origSend.apply(this, args);
+      if (text && tether.active && tetherIdentity()) {
+        const me = tetherIdentity();
+        const env = {
+          type: 'msg', role: 'user',
+          from: me.name, rappid: me.rappid,
+          twinName: summonedTwin?.display_name || null,
+          content: text, at: Date.now(),
+        };
+        if (tether.isHost) broadcast(env);
+        else if (tether.hostConn) try { tether.hostConn.send(env); } catch (_) {}
+      }
+      return result;
+    };
+    wrapped._tetherWrapped = true;
+    window.sendChat = wrapped;
+  }
+  // Also broadcast the local twin's assistant reply when one fires.
+  // The vb headless API and inline send paths both push to fullTranscript,
+  // so we observe that array via a setter trap.
+  if (state && state.fullTranscript && !state.fullTranscript._tetherWrapped) {
+    const origPush = state.fullTranscript.push.bind(state.fullTranscript);
+    state.fullTranscript.push = function(entry) {
+      const r = origPush(entry);
+      try {
+        if (tether.active && entry && entry.assistant) {
+          const me = tetherIdentity();
+          const env = {
+            type: 'msg', role: 'assistant',
+            from: me.name, rappid: me.rappid,
+            twinName: summonedTwin?.display_name || null,
+            content: entry.assistant, at: Date.now(),
+          };
+          if (tether.isHost) broadcast(env);
+          else if (tether.hostConn) tether.hostConn.send(env);
+        }
+      } catch (_) {}
+      return r;
+    };
+    state.fullTranscript._tetherWrapped = true;
+  }
+}
+
+// Open the modal, picking up an inbound ?join= deep-link if present.
+function openTetherModal() {
+  document.getElementById('tether-modal')?.classList.add('open');
+  // Reset visible panels
+  document.getElementById('tether-mode-pick').hidden = !!tether.active;
+  document.getElementById('tether-host').hidden     = !(tether.active && tether.isHost);
+  document.getElementById('tether-join').hidden     = true;
+  document.getElementById('tether-connected').hidden = !(tether.active && !tether.isHost);
+  renderTetherPanels();
+}
+function closeTetherModal() {
+  document.getElementById('tether-modal')?.classList.remove('open');
+}
+
+function wireTether() {
+  document.getElementById('btn-tether')?.addEventListener('click', openTetherModal);
+  document.getElementById('tether-close')?.addEventListener('click', closeTetherModal);
+  document.getElementById('tether-host-btn')?.addEventListener('click', tetherStartHost);
+  document.getElementById('tether-join-btn')?.addEventListener('click', () => {
+    document.getElementById('tether-mode-pick').hidden = true;
+    document.getElementById('tether-join').hidden = false;
+  });
+  document.getElementById('tether-join-go')?.addEventListener('click', () => {
+    const raw = (document.getElementById('tether-join-input')?.value || '').trim();
+    if (!raw) return;
+    // Accept either a peerId, a query-fragment, or a full ?join=<id> URL.
+    let peerId = raw;
+    try {
+      const u = new URL(raw);
+      const qp = u.searchParams.get('join');
+      if (qp) peerId = qp;
+    } catch (_) {}
+    if (peerId.includes('?join=')) peerId = peerId.split('?join=').pop().split(/[&#]/)[0];
+    tetherJoin(decodeURIComponent(peerId));
+  });
+  document.getElementById('tether-leave')?.addEventListener('click', tetherLeave);
+  // Also clean up on tab close — tells the host we left.
+  window.addEventListener('beforeunload', () => {
+    try { tether.hostConn?.close(); } catch (_) {}
+    try { tether.peer?.destroy(); }   catch (_) {}
+  });
+  // Auto-pickup ?join=<peerId> deep-link from a scanned QR.
+  const params = new URLSearchParams(location.search);
+  const inboundJoin = params.get('join');
+  if (inboundJoin) {
+    // Strip ?join= so a refresh doesn't keep auto-joining.
+    const u = new URL(location.href);
+    u.searchParams.delete('join');
+    history.replaceState({}, '', u.toString());
+    // Pre-fill + open the join panel; user confirms with name prompt + click.
+    setTimeout(() => {
+      openTetherModal();
+      document.getElementById('tether-mode-pick').hidden = true;
+      document.getElementById('tether-join').hidden = false;
+      const inp = document.getElementById('tether-join-input');
+      if (inp) inp.value = inboundJoin;
+    }, 400);
+  }
+  // Install chat-hooks once the chat surface is live.
+  setTimeout(tetherInstallChatHooks, 0);
+}
+
 /* ───── Wire UI ────────────────────────────────────────── */
 /* Global drag-drop hot-load — drop a .py anywhere on the window to install
  * the agent into the binder + hand (auto-loaded as a tool); drop a .egg to
@@ -6588,10 +7138,110 @@ window.importTwinEgg = importTwinEgg;
   }
 })();
 
+/* RAR canonical-cards lookup — pulls the holo_cards.json catalog from RAR
+ * (cards/holo_cards.json) and uses it to enrich every locally-minted card.
+ * When a card's slug exists upstream, its display fields (display_name,
+ * title, type_line, mana_cost, colors, rarity, abilities, flavor_text,
+ * avatar_svg, stats, evolution) are overwritten with the canonical version
+ * so the brainstem renders the same card the RAR store does — no more
+ * "@local/you" UNFORGED MYTHIC #6879 placeholder for agents that have a
+ * real published card.
+ *
+ * Catalog is cached for 24h to avoid hitting raw.githubusercontent every
+ * page load. Re-fetch is silent on failure (we keep what we have). */
+const RAR_CARDS_URL  = 'https://raw.githubusercontent.com/kody-w/RAR/main/cards/holo_cards.json';
+const RAR_CARDS_KEY  = 'rar_holo_cards_cache';
+const RAR_CARDS_TTL  = 24 * 60 * 60 * 1000;
+let _rarCardsCatalog = null;
+
+async function loadRarCardsCatalog() {
+  // Try cache first
+  try {
+    const raw = localStorage.getItem(RAR_CARDS_KEY);
+    if (raw) {
+      const c = JSON.parse(raw);
+      if (c && c.at && c.data && (Date.now() - c.at) < RAR_CARDS_TTL) {
+        _rarCardsCatalog = c.data;
+      }
+    }
+  } catch (_) {}
+  // Fire a refresh in the background — even if cache hit, keep it warm.
+  fetch(RAR_CARDS_URL, { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (!data || typeof data !== 'object') return;
+      _rarCardsCatalog = data;
+      try { localStorage.setItem(RAR_CARDS_KEY, JSON.stringify({ at: Date.now(), data })); }
+      catch (_) {}
+      // Re-render anything that's already on screen so cards refresh in place.
+      try { renderBinder?.(); renderHand?.(); renderAgents?.(); } catch (_) {}
+    })
+    .catch(() => {});
+}
+
+function enrichCardFromRar(cardObj) {
+  if (!cardObj || !cardObj.card || !_rarCardsCatalog) return cardObj;
+  const slug = cardObj.name || cardObj.manifest?.name;
+  if (!slug) return cardObj;
+  const rar = _rarCardsCatalog[slug];
+  if (!rar) return cardObj;
+  // Merge the canonical RAR fields onto the locally-minted card. Local
+  // fields not overridden (filename, sha256, source, seed) survive so
+  // hot-execution and SHA-pinning still work — only the *display* layer
+  // becomes RAR's source of truth.
+  const c = cardObj.card;
+  Object.assign(c, {
+    display_name:  rar.name || c.display_name,
+    title:         rar.title || c.title,
+    type_line:     rar.type_line || c.type_line,
+    mana_cost:     rar.mana_cost || c.mana_cost,
+    colors:        rar.colors || c.colors,
+    rarity:        rar.rarity_tier || rar.rarity || c.rarity,
+    rarity_label:  rar.rarity_label || c.rarity_label,
+    flavor_text:   rar.flavor_text || c.flavor_text,
+    avatar_svg:    rar.avatar_svg || c.avatar_svg,
+    abilities:     rar.abilities || c.abilities,
+    stats:         rar.stats || c.stats,
+    hp:            rar.hp ?? c.hp,
+    power:         rar.power ?? c.power,
+    toughness:     rar.toughness ?? c.toughness,
+    set_code:      rar.set_code || c.set_code,
+    promo:         rar.promo ?? c.promo,
+    artist:        rar.artist || c.artist,
+    agent_types:   rar.agent_types || c.agent_types,
+    type_colors:   rar.type_colors || c.type_colors,
+    typed_abilities: rar.typed_abilities || c.typed_abilities,
+    weakness:      rar.weakness || c.weakness,
+    weakness_label: rar.weakness_label || c.weakness_label,
+    resistance:    rar.resistance || c.resistance,
+    resistance_label: rar.resistance_label || c.resistance_label,
+    retreat_cost:  rar.retreat_cost ?? c.retreat_cost,
+    evolution:     rar.evolution || c.evolution,
+    tier:          rar.tier || c.tier,
+    floor_pts:     rar.floor_pts ?? c.floor_pts,
+  });
+  c._rar_canonical = true;
+  return cardObj;
+}
+
+// Wrap RAPP.Card.mintCard so every callsite (bootBinder, importPyFile,
+// ingestEggBuffer, drag-drop, paste-source) gets the RAR enrichment for free.
+(function wrapMintCardWithRar() {
+  if (!window.RAPP || !RAPP.Card || !RAPP.Card.mintCard) return;
+  const orig = RAPP.Card.mintCard;
+  RAPP.Card.mintCard = async function(source, filenameHint) {
+    const c = await orig.call(this, source, filenameHint);
+    return enrichCardFromRar(c);
+  };
+})();
+
 (async () => {
   loadSettings();
   await handleGitHubAuthCallback();   // pick up ?code=... after OAuth round-trip
   if (state.settings.ghToken && !state.settings.ghUser) await fetchGitHubUser();
+  // Kick off the RAR card catalog load in parallel — we don't block boot
+  // on it (cards mint just fine without it; they re-render once it lands).
+  loadRarCardsCatalog();
   // Refresh model lists from APIs on every load
   if (state.settings.provider === 'copilot' && state.settings.ghuToken) fetchCopilotModels();
   else if (state.settings.provider === 'github') fetchGitHubModels();
@@ -6615,6 +7265,7 @@ window.importTwinEgg = importTwinEgg;
   if (summonedTwin) document.body.setAttribute('data-twin-summoned', '');
   wire();
   wireGlobalDropzone();
+  wireTether();
   installHeadlessConsoleApi();
   wireMicButton();
   setupA2HS();
