@@ -73,6 +73,10 @@ curl -s https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/index.json | 
 
 Browseable HTML view: <https://kody-w.github.io/rapp-egg-hub/>
 
+## Specification
+
+The full digital-twin specification lives at [`SPEC.md`](./SPEC.md) — schema `rapp-twin-spec/1.0`, frozen. It defines what a twin is (rappid + soul + memory + lineage + body), the egg format (`brainstem-egg/2.x`), the hub conventions (sidecar JSON + auto-rebuild), the lifecycle operations (`summon`/`hatch`/`boot`/`stop`/`update_soul`/`lay_egg`), the impersonation hard rule (every twin must distinguish itself from the human/thing it represents), and the compliance checklist for hub contributions. Read SPEC.md before authoring an egg you want others to hatch.
+
 ## Contributing an egg
 
 1. Pack a twin into an `.egg` with the Twin agent (or any `brainstem-egg/2.x` packer).
