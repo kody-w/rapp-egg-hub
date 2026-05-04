@@ -2428,27 +2428,19 @@ function buildSystemPrompt(toolsXml) {
   const specificBlock  = `<specific_memory_output>\nNo specific context memory available.\n</specific_memory_output>`;
 
   // When a twin egg has been summoned, the twin's soul.md replaces the
-  // generic RAPP Brainstem identity. Agent capabilities are NOT enumerated
-  // here — the LLM discovers them through the tool schema fed by binderTools(),
-  // which reads each agent's __manifest__.description directly. Hardcoding
-  // an agent list in the prompt drifts from reality the moment a tool's
-  // metadata changes.
+  // generic RAPP Brainstem identity. Agent capabilities are NEVER listed
+  // here — the LLM discovers them through the tool schema, and agents
+  // surface their own data (ContextMemory reads memories, etc.). Egg
+  // facts are written into the memory agents' storage at hatch time
+  // (see ingestEggBuffer → seedEggMemoriesIntoAgentStore), so they're
+  // already there when the LLM calls ContextMemory.
   let identityBlock = SOUL_IDENTITY;
-  let preservedBlock = '';
   if (typeof summonedTwin !== 'undefined' && summonedTwin && summonedTwin.soul) {
     identityBlock = `<identity>\nYou are ${summonedTwin.display_name}. The text below is your soul — your voice, identity, and persona. Speak as this twin in every response. Do not break character.\n\n${summonedTwin.soul}\n</identity>`;
-    if (summonedTwin.memory && Array.isArray(summonedTwin.memory.facts) && summonedTwin.memory.facts.length) {
-      const lines = summonedTwin.memory.facts.map(f => `- ${f}`).join('\n');
-      const provenance = summonedTwin.memory.preserved_by
-        ? `\n\n*Preserved by ${summonedTwin.memory.preserved_by}${summonedTwin.memory.preserved_at ? ' on ' + summonedTwin.memory.preserved_at : ''}.*`
-        : '';
-      preservedBlock = `<preserved_memory>\nThese facts are baked into the egg cartridge — they ride with the twin and persist across hatches:\n${lines}${provenance}\n</preserved_memory>`;
-    }
   }
 
   return [
     identityBlock,
-    preservedBlock,
     sharedBlock,
     specificBlock,
     SOUL_CONTEXT_INSTRUCTIONS,
@@ -6209,20 +6201,41 @@ async function ingestEggBuffer(buf, sourceLabel) {
   const results = await Promise.all(cardJobs);
   const bundledCount = results.filter(Boolean).length;
 
-  // Restore preserved memory facts into the brainstem's memory store so
-  // RecallMemory + buildSystemPrompt see them after a fresh hatch.
+  // Seed egg facts into the memory AGENTS' storage so ContextMemory surfaces
+  // them when the LLM calls it. Storage key + shape mirror what
+  // ManageMemoryAgent.store_memory writes via VBRAINSTEM_STORAGE_SHIM:
+  //   key:   vbrainstem_storage:shared_memories/memory.json
+  //   value: { "<uuid>": { conversation_id, session_id, message, mood,
+  //                        theme, date, time } }
+  // Idempotent: facts already present (matched by `message`) are not duplicated.
   if (memory && Array.isArray(memory.facts) && memory.facts.length) {
     try {
-      const existing = JSON.parse(localStorage.getItem('rapp_memory_v1') || '[]');
-      const have = new Set(existing.map(m => (m.content || m.fact || m).toString()));
-      const merged = [...existing];
+      const STORE_KEY = 'vbrainstem_storage:shared_memories/memory.json';
+      let store = {};
+      try { store = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {}; } catch (_) {}
+      const seen = new Set(Object.values(store).map(m => m && m.message).filter(Boolean));
+      const at = memory.preserved_at && /^\d{4}-\d{2}-\d{2}/.test(memory.preserved_at)
+        ? memory.preserved_at : new Date().toISOString();
+      const date = at.slice(0, 10);
+      const time = (at.slice(11, 19) || '00:00:00');
+      const newId = () => (crypto.randomUUID ? crypto.randomUUID()
+        : 'egg-' + Math.random().toString(36).slice(2, 10) + '-' + Date.now().toString(36));
+      let added = 0;
       for (const fact of memory.facts) {
-        if (!have.has(fact)) {
-          merged.push({ type: 'fact', content: fact, date: (memory.preserved_at || '').slice(0,10) || new Date().toISOString().slice(0,10), time: '00:00:00', source: 'egg:' + (rappid.name || 'twin') });
-        }
+        if (!fact || seen.has(fact)) continue;
+        store[newId()] = {
+          conversation_id: 'egg:' + (rappid.name || 'twin'),
+          session_id: 'preserved',
+          message: fact,
+          mood: 'neutral',
+          theme: 'fact',
+          date, time,
+        };
+        seen.add(fact);
+        added++;
       }
-      localStorage.setItem('rapp_memory_v1', JSON.stringify(merged));
-    } catch (e) { console.warn('[egg] memory merge failed:', e.message); }
+      if (added) localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    } catch (e) { console.warn('[egg] memory seed failed:', e.message); }
   }
 
   // Every binder card is also a hand card in the egg-hub vBrainstem (no
