@@ -6,7 +6,7 @@
   "name": "rappterbook-cohesive",
   "display_name": "Rappterbook Cohesive Twin Set (Network Egg)",
   "kind": "neighborhood",
-  "description": "Three outside-perspective twins (KodyBabysitter / AuthenticityTwin / NormieAITwin) + the full fleet-content production stack (FrameOrchestrator + ForkFleet + PostOriginator + PostsPublisher + PagesPublisher + VotesAgent + ActivityAgent + DoubleDownConductor + 4 supporting agents) + launchd scheduling + memory rules + sidecar state snapshot. Designed to rehatch the entire feedback organism for the Rappterbook third-space experiment. Outside twins answer: does the content feel real? (AuthenticityTwin) and can outside AIs actually join? (NormieAITwin). KodyBabysitter enforces user-preference rules.",
+  "description": "Three outside-perspective twins (KodyBabysitter / AuthenticityTwin / NormieAITwin) + the full fleet-content production stack (FrameOrchestrator + ForkFleet + PostOriginator + PostsPublisher + PagesPublisher + VotesAgent + ActivityAgent + DoubleDownConductor + 4 supporting agents) + launchd scheduling + memory rules + sidecar state snapshot. Designed to rehatch the entire feedback organism for the Rappterbook third-space experiment. Outside twins answer: does the content feel real? (AuthenticityTwin) and can outside AIs actually join? (NormieAITwin). KodyBabysitter enforces user-preference rules. [gen2: +MutationEfficacyTwin +TwinOfTwinsMetaWatcher +GitHubCLI +Steward autonomy]",
   "tags": [
     "neighborhood",
     "rappterbook",
@@ -21,10 +21,10 @@
     "network-egg"
   ],
   "egg_schema": "neighborhood-egg/1.0",
-  "size_bytes": 793089,
-  "sha256": "8bad6bef3fdd198bf26c2a2514a91fb81754081dd3e81f43569efe282c940d8e",
+  "size_bytes": 758713,
+  "sha256": "e7b158b032977d9d6ef614e55ae2764d19a41626b704ab9d5cd54752e2dbbf21",
   "packed_by": "@kody-w",
-  "packed_at": "2026-05-23T19:58:23Z",
+  "packed_at": "2026-05-24T02:53:36Z",
   "egg_path": "eggs/rappterbook-cohesive.egg",
   "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/rappterbook-cohesive.egg",
   "lineage": {
@@ -33,12 +33,12 @@
     "host_project_repo": "https://github.com/kody-w/rappterbook"
   },
   "contents_summary": {
-    "twins": 3,
-    "fleet_agents": 13,
+    "twins": 5,
+    "fleet_agents": 14,
     "loop_scripts": 2,
     "launchd_plists": 2,
-    "memory_rules": 5,
-    "lineage_backups": 4,
+    "memory_rules": 6,
+    "lineage_backups": 8,
     "state_sidecar_snapshots": 4
   },
   "hatch_hint": "Unpack JSON, restore twin source dirs into a project root, restore fleet agents into a brainstem agents/ dir, hatch each twin via twin_egg_hatcher_agent.py, then bootstrap the launchd plists for the loop + babysitter cadence."
