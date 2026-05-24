@@ -4,7 +4,7 @@
   "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-05-24T02:53:36Z",
+  "updated_at": "2026-05-24T02:53:43Z",
   "egg_count": 4,
   "eggs": [
     {
@@ -63,36 +63,8 @@
     },
     {
       "schema": "rapp-egg-hub-entry/1.0",
-      "slug": "wildhaven-ceo",
-      "rappid_uuid": "8c3e91d4-bfa1-4f6a-b2d7-15a8e7c4d3f9",
-      "name": "wildhaven-ceo",
-      "display_name": "The Wildhaven CEO",
-      "kind": "pre-founder",
-      "description": "Public-facing CEO twin of Wildhaven AI Homes. The brand's executive voice in public, pre-founding. Authenticated collaborators with read access to kody-w/wildhaven-ceo pull richer context (board minutes, strategy docs, IP roadmap) at runtime; anonymous visitors get the public manifesto voice. Bundles standard memory cartridges.",
-      "tags": [
-        "pre-founder",
-        "ceo",
-        "wildhaven",
-        "executive",
-        "memory-equipped"
-      ],
-      "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 9867,
-      "sha256": "48c956bc74cd395ecb8260a578eb6ec1cf14d0a12f417e85904833fa517862f4",
-      "packed_by": "@kody-w",
-      "packed_at": "2026-05-04T17:24:27Z",
-      "egg_path": "eggs/wildhaven-ceo.egg",
-      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/wildhaven-ceo.egg",
-      "lineage": {
-        "parent_rappid": "37ad22f5-ed6d-48b1-b8b4-61019f58a42b",
-        "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
-      }
-    },
-    {
-      "schema": "rapp-egg-hub-entry/1.0",
       "slug": "rappterbook-cohesive",
       "rappid_uuid": "cca817b507093e83698f7eb91195da1d",
-      "rappid": "rappid:v2:neighborhood:@kody-w/rappterbook-cohesive-twin-set:cca817b507093e83698f7eb91195da1d@local",
       "name": "rappterbook-cohesive",
       "display_name": "Rappterbook Cohesive Twin Set (Network Egg)",
       "kind": "neighborhood",
@@ -121,17 +93,34 @@
         "parent_rappid": "rappid:v2:prototype:@rapp/origin:0b635450c04249fbb4b1bdb571044dec@github.com/kody-w/RAPP",
         "parent_repo": "https://github.com/kody-w/RAPP",
         "host_project_repo": "https://github.com/kody-w/rappterbook"
-      },
-      "contents_summary": {
-        "twins": 5,
-        "fleet_agents": 14,
-        "loop_scripts": 2,
-        "launchd_plists": 2,
-        "memory_rules": 6,
-        "lineage_backups": 8,
-        "state_sidecar_snapshots": 4
-      },
-      "hatch_hint": "Unpack JSON, restore twin source dirs into a project root, restore fleet agents into a brainstem agents/ dir, hatch each twin via twin_egg_hatcher_agent.py, then bootstrap the launchd plists for the loop + babysitter cadence."
+      }
+    },
+    {
+      "schema": "rapp-egg-hub-entry/1.0",
+      "slug": "wildhaven-ceo",
+      "rappid_uuid": "8c3e91d4-bfa1-4f6a-b2d7-15a8e7c4d3f9",
+      "name": "wildhaven-ceo",
+      "display_name": "The Wildhaven CEO",
+      "kind": "pre-founder",
+      "description": "Public-facing CEO twin of Wildhaven AI Homes. The brand's executive voice in public, pre-founding. Authenticated collaborators with read access to kody-w/wildhaven-ceo pull richer context (board minutes, strategy docs, IP roadmap) at runtime; anonymous visitors get the public manifesto voice. Bundles standard memory cartridges.",
+      "tags": [
+        "pre-founder",
+        "ceo",
+        "wildhaven",
+        "executive",
+        "memory-equipped"
+      ],
+      "egg_schema": "brainstem-egg/2.1",
+      "size_bytes": 9867,
+      "sha256": "48c956bc74cd395ecb8260a578eb6ec1cf14d0a12f417e85904833fa517862f4",
+      "packed_by": "@kody-w",
+      "packed_at": "2026-05-04T17:24:27Z",
+      "egg_path": "eggs/wildhaven-ceo.egg",
+      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/wildhaven-ceo.egg",
+      "lineage": {
+        "parent_rappid": "37ad22f5-ed6d-48b1-b8b4-61019f58a42b",
+        "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
+      }
     }
   ]
 }
