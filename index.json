@@ -83,8 +83,8 @@
         "network-egg"
       ],
       "egg_schema": "neighborhood-egg/1.0",
-      "size_bytes": 758713,
-      "sha256": "e7b158b032977d9d6ef614e55ae2764d19a41626b704ab9d5cd54752e2dbbf21",
+      "size_bytes": 758753,
+      "sha256": "8d4ff0e79403235020c2ab61b4999b082d59801a0b2f1da8c8777a9fa5a34707",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-24T02:53:36Z",
       "egg_path": "eggs/rappterbook-cohesive.egg",
