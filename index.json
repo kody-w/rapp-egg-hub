@@ -4,7 +4,7 @@
   "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-05-24T02:53:43Z",
+  "updated_at": "2026-05-27T18:40:45Z",
   "egg_count": 4,
   "eggs": [
     {
