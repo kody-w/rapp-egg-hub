@@ -5,7 +5,7 @@
   "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-06-01T18:51:45Z",
+  "updated_at": "2026-06-01T18:53:46Z",
   "egg_count": 4,
   "eggs": [
     {
