@@ -1,11 +1,11 @@
 {
   "schema": "rapp-egg-hub/2.0",
-  "spec": "rapp-twin-spec/2.0",
+  "spec": "rapp-rappid-spec/2.0",
   "name": "rapp-egg-hub",
   "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-06-01T18:53:46Z",
+  "updated_at": "2026-06-01T19:33:44Z",
   "egg_count": 4,
   "eggs": [
     {
@@ -25,8 +25,8 @@
         "first-egg"
       ],
       "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 3598,
-      "sha256": "2aa41bbb54e9ab8de9d5c964f08f8da79f154252565434bd81334d16180b945b",
+      "size_bytes": 3599,
+      "sha256": "869207e28c53ffd23a446a72c7aa97eaa957e6fb0e3969a6dc0aeed57fa570b8",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-04T16:49:36Z",
       "twin_html": "twins/grandma-rose.html",
@@ -58,7 +58,7 @@
       ],
       "egg_schema": "brainstem-egg/2.1",
       "size_bytes": 10569,
-      "sha256": "0ad0559d641df5ef8b12c1f87d1286cad9ea3febd97bf8e71e6cd9d6e9ac0dcd",
+      "sha256": "fb9ad08e15888ab96e07d0ebdc7b67f80b12aed81ed75cb61078c549b3602805",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-04T17:11:31Z",
       "twin_html": "twins/kody-w.html",
@@ -127,7 +127,7 @@
       ],
       "egg_schema": "brainstem-egg/2.1",
       "size_bytes": 10074,
-      "sha256": "640a1b9a85f23c2dc46a8076fee6c8681339e3a90d3b2fd0394cff1f6002ecfc",
+      "sha256": "880afed96a2cb491bc07dfa4e59d07af17dbba421cff2f8cacfd36b1bc3a5da5",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-04T17:24:27Z",
       "twin_html": "twins/wildhaven-ceo.html",

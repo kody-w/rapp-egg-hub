@@ -1,6 +1,6 @@
 # Digital Twin Specification
 
-> **Schema: `rapp-twin-spec/2.0`** &nbsp;·&nbsp; First published: 2026-05-04 &nbsp;·&nbsp; v2.0 locked: 2026-06-01
+> **Schema: `rapp-rappid-spec/2.0`** &nbsp;·&nbsp; First published: 2026-05-04 &nbsp;·&nbsp; v2.0 locked: 2026-06-01
 >
 > The contract for what it means to be a "digital twin" in this ecosystem — how it is identified, how it speaks, how it remembers, how it travels, how it inherits, how it survives. Twins authored against this spec hatch on every rapp-installer'd brainstem today and forever.
 
@@ -652,13 +652,13 @@ Until phase 2 fills in, `sig_suite: "none"` + sha256 is the baseline. It detects
 
 ## 14. Versioning and stability
 
-This document is `rapp-twin-spec/2.0`. **The `rappid` *string* form is frozen forever** — `rappid:<birth-slug>:<64hex>`, no version tag, ever. **The `rappid.json` RECORD is versionless and additive** — new needs become new optional fields, never new string forms. Future spec versions are additive only; old readers ignore unknown fields.
+This document is `rapp-rappid-spec/2.0`. **The `rappid` *string* form is frozen forever** — `rappid:<birth-slug>:<64hex>`, no version tag, ever. **The `rappid.json` RECORD is versionless and additive** — new needs become new optional fields, never new string forms. Future spec versions are additive only; old readers ignore unknown fields.
 
 ### Schemas referenced
 
 | Schema | Purpose |
 |---|---|
-| `rapp-twin-spec/2.0` | this document |
+| `rapp-rappid-spec/2.0` | this document |
 | `rapp-rappid/2.0` | rappid.json record shape (hash-derived identity + reserved ownership fields) |
 | `brainstem-egg/2.1` | egg cartridge format (default for twins) |
 | `rapp-egg-hub-entry/2.0` | sidecar JSON in this hub |
@@ -740,4 +740,4 @@ A twin egg ships hub-compliant when ALL of the following are true:
 
 ## 17. Conformance notice
 
-A twin authored against `rapp-twin-spec/2.0` will hatch and run on every rappterbox console install today and forever. The `rappid` string form is frozen; the record is versionless and additive; the impersonation hard rule is non-negotiable; the NO-PII rule is mechanically enforced. Legacy UUID twins re-anchor losslessly on first hatch and their chains stay walkable. The hub will not accept eggs that fail §15 — that's the compact between contributors and downstream hatchers.
+A twin authored against `rapp-rappid-spec/2.0` will hatch and run on every rappterbox console install today and forever. The `rappid` string form is frozen; the record is versionless and additive; the impersonation hard rule is non-negotiable; the NO-PII rule is mechanically enforced. Legacy UUID twins re-anchor losslessly on first hatch and their chains stay walkable. The hub will not accept eggs that fail §15 — that's the compact between contributors and downstream hatchers.

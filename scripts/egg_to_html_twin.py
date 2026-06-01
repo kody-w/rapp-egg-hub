@@ -6,7 +6,7 @@ carries the whole egg baked in as base64, and is the primary way a normal person
 receives/trades a twin — because a raw .egg has no file association, but an .html opens
 in any browser. JS-FREE downloads (data: URI anchors) so it survives Teams preview.
 
-Conforms to SPEC rapp-twin-spec/2.0 (single rappid standard, no PII).
+Conforms to SPEC rapp-rappid-spec/2.0 (single rappid standard, no PII).
 
 Usage:  python3 scripts/egg_to_html_twin.py eggs/<slug>.egg [--out twins/<slug>.html]
 Produces: twins/<slug>.html  (contains: holo card, the egg, and an exportable
@@ -76,7 +76,7 @@ Drag this single file into your locally running RAPP brainstem's agents/ directo
 The brainstem reloads agents every request, so no restart is needed — just invoke it.
 It carries an entire RAPP twin baked in as a base64 .egg; on invoke it self-bootstraps:
 unpacks the twin into ~/.rapp/twins/, ready to boot. No .egg file, no viewer, no extra
-downloads. Conforms to SPEC rapp-twin-spec/2.0.
+downloads. Conforms to SPEC rapp-rappid-spec/2.0.
 
 Actions: hatch (default) | info | boot
 """

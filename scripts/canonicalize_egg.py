@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""canonicalize_egg.py — migrate a legacy .egg to the rapp-twin-spec/2.0 rappid standard.
+"""canonicalize_egg.py — migrate a legacy .egg to the rapp-rappid-spec/2.0 rappid standard.
 
 Rewrites the egg's repo/rappid.json + manifest.json so the rappid becomes the canonical
 `rappid:<birth-slug>:<hex>` form and reserves the eternity-grade ownership fields.
@@ -125,7 +125,7 @@ def main():
         srcm.setdefault("name", slug)
         srcm.setdefault("kind", json.loads(items['repo/rappid.json']).get("kind", "twin"))
         srcm.setdefault("haiku", json.loads(items['repo/rappid.json']).get("haiku", ""))
-        man["_spec"] = "rapp-twin-spec/2.0"
+        man["_spec"] = "rapp-rappid-spec/2.0"
         items["manifest.json"] = (json.dumps(man, indent=2) + "\n").encode()
 
     # backup + repack (drop any banned secret files defensively)

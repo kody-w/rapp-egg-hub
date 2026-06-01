@@ -52,7 +52,7 @@ def derive_entry(egg_path: pathlib.Path) -> dict:
         except json.JSONDecodeError:
             print(f"[rebuild] WARN: malformed sidecar {sidecar_path}", file=sys.stderr)
 
-    # rappid:<slug>:<hex> is canonical (rapp-twin-spec/2.0). Pull it from the egg manifest
+    # rappid:<slug>:<hex> is canonical (rapp-rappid-spec/2.0). Pull it from the egg manifest
     # source.rappid; tolerate a legacy rappid_uuid sidecar during migration.
     rappid = (src.get("rappid") or sidecar.get("rappid")
               or sidecar.get("rappid_uuid") or inner.get("rappid"))
@@ -116,7 +116,7 @@ def main() -> int:
 
     catalog = {
         "schema": "rapp-egg-hub/2.0",
-        "spec": "rapp-twin-spec/2.0",
+        "spec": "rapp-rappid-spec/2.0",
         "name": "rapp-egg-hub",
         "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
         "homepage": "https://kody-w.github.io/rapp-egg-hub/",
