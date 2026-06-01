@@ -1,7 +1,6 @@
 {
-  "schema": "rapp-egg-hub-entry/1.0",
+  "schema": "rapp-egg-hub-entry/2.0",
   "slug": "grandma-rose",
-  "rappid_uuid": "0d51f2b3-7c2c-4f9a-8e5b-7f0c92ab4d7e",
   "name": "grandma-rose",
   "display_name": "Grandma Rose",
   "kind": "memorial",
@@ -13,8 +12,8 @@
     "first-egg"
   ],
   "egg_schema": "brainstem-egg/2.1",
-  "size_bytes": 3382,
-  "sha256": "659aba41c41cec0e56ecbfc4148edbd6ec7c4b4dc5dc3a5e898b42ef9d7fbf7f",
+  "size_bytes": 3598,
+  "sha256": "2aa41bbb54e9ab8de9d5c964f08f8da79f154252565434bd81334d16180b945b",
   "packed_by": "@kody-w",
   "packed_at": "2026-05-04T16:49:36Z",
   "egg_path": "eggs/grandma-rose.egg",
@@ -24,5 +23,7 @@
     "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
   },
   "memory_facts_count": 3,
-  "_note": "First egg in the hub \u2014 the seed that demonstrates the format."
+  "_note": "First egg in the hub \u2014 the seed that demonstrates the format.",
+  "rappid": "rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e",
+  "haiku": ""
 }

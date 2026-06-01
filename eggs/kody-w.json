@@ -1,7 +1,6 @@
 {
-  "schema": "rapp-egg-hub-entry/1.0",
+  "schema": "rapp-egg-hub-entry/2.0",
   "slug": "kody-w",
-  "rappid_uuid": "1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f",
   "name": "kody-w",
   "display_name": "Kody Wildfeuer",
   "github": "https://github.com/kody-w",
@@ -16,8 +15,8 @@
     "memory-equipped"
   ],
   "egg_schema": "brainstem-egg/2.1",
-  "size_bytes": 10370,
-  "sha256": "d7cb38afe192be1353b9e426139f063ed5720cb92546ffe93b8f7d97c95aacd8",
+  "size_bytes": 10569,
+  "sha256": "0ad0559d641df5ef8b12c1f87d1286cad9ea3febd97bf8e71e6cd9d6e9ac0dcd",
   "packed_by": "@kody-w",
   "packed_at": "2026-05-04T17:11:31Z",
   "egg_path": "eggs/kody-w.egg",
@@ -27,5 +26,7 @@
     "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
   },
   "memory_facts_count": 8,
-  "_note": "Slug = GitHub handle (@kody-w). Display name = Kody Wildfeuer. Public sources only."
+  "_note": "Slug = GitHub handle (@kody-w). Display name = Kody Wildfeuer. Public sources only.",
+  "rappid": "rappid:kody-w:1b5e7aa92c464cd89f1f0e3b62fc5e8f",
+  "haiku": ""
 }

@@ -52,14 +52,27 @@ def derive_entry(egg_path: pathlib.Path) -> dict:
         except json.JSONDecodeError:
             print(f"[rebuild] WARN: malformed sidecar {sidecar_path}", file=sys.stderr)
 
+    # rappid:<slug>:<hex> is canonical (rapp-twin-spec/2.0). Pull it from the egg manifest
+    # source.rappid; tolerate a legacy rappid_uuid sidecar during migration.
+    rappid = (src.get("rappid") or sidecar.get("rappid")
+              or sidecar.get("rappid_uuid") or inner.get("rappid"))
+    hexpart = ""
+    if rappid:
+        m = rappid.rsplit(":", 1)
+        hexpart = m[1] if len(m) > 1 else rappid
+    twin_html = f"twins/{slug}.html"
+    has_twin = (HUB_ROOT / twin_html).exists()
+
     # Sidecar wins for human-curated fields; egg manifest fills technical defaults.
     entry = {
-        "schema": "rapp-egg-hub-entry/1.0",
+        "schema": "rapp-egg-hub-entry/2.0",
         "slug": sidecar.get("slug") or slug,
-        "rappid_uuid": sidecar.get("rappid_uuid") or src.get("rappid_uuid") or inner.get("rappid"),
+        "rappid": rappid,
+        "hash_bits": len(hexpart) * 4 if hexpart else None,
         "name": sidecar.get("name") or src.get("name") or slug,
         "display_name": sidecar.get("display_name") or sidecar.get("name") or src.get("name") or slug,
-        "kind": sidecar.get("kind"),
+        "kind": sidecar.get("kind") or src.get("kind"),
+        "haiku": sidecar.get("haiku") or src.get("haiku") or "",
         "description": sidecar.get("description") or "",
         "tags": sidecar.get("tags") or [],
         "egg_schema": inner.get("schema") or sidecar.get("egg_schema"),
@@ -67,10 +80,13 @@ def derive_entry(egg_path: pathlib.Path) -> dict:
         "sha256": sha,
         "packed_by": sidecar.get("packed_by") or "(unknown)",
         "packed_at": sidecar.get("packed_at") or inner.get("exported_at"),
+        # the .html twin is the PRIMARY share artifact (the .html IS the twin); .egg kept raw
+        "twin_html": twin_html if has_twin else None,
+        "twin_url": f"{RAW_BASE}/{twin_html}" if has_twin else None,
         "egg_path": f"eggs/{egg_path.name}",
         "raw_url": f"{RAW_BASE}/eggs/{egg_path.name}",
         "lineage": sidecar.get("lineage") or {
-            "parent_rappid": src.get("parent_rappid_uuid"),
+            "parent_rappid": src.get("parent_rappid"),
             "parent_repo": src.get("repo"),
         },
     }
@@ -99,9 +115,10 @@ def main() -> int:
             print(f"[rebuild] FAIL on {egg.name}: {e}", file=sys.stderr)
 
     catalog = {
-        "schema": "rapp-egg-hub/1.0",
+        "schema": "rapp-egg-hub/2.0",
+        "spec": "rapp-twin-spec/2.0",
         "name": "rapp-egg-hub",
-        "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
+        "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
         "homepage": "https://kody-w.github.io/rapp-egg-hub/",
         "raw_base": RAW_BASE,
         "updated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),

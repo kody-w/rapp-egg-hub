@@ -1,19 +1,22 @@
 {
-  "schema": "rapp-egg-hub/1.0",
+  "schema": "rapp-egg-hub/2.0",
+  "spec": "rapp-twin-spec/2.0",
   "name": "rapp-egg-hub",
-  "description": "Public hub for digital-twin .egg cartridges. Pull any .egg by URL and hatch it locally with the Twin agent.",
+  "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-05-27T18:40:45Z",
+  "updated_at": "2026-06-01T18:51:45Z",
   "egg_count": 4,
   "eggs": [
     {
-      "schema": "rapp-egg-hub-entry/1.0",
+      "schema": "rapp-egg-hub-entry/2.0",
       "slug": "grandma-rose",
-      "rappid_uuid": "0d51f2b3-7c2c-4f9a-8e5b-7f0c92ab4d7e",
+      "rappid": "rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e",
+      "hash_bits": 128,
       "name": "grandma-rose",
       "display_name": "Grandma Rose",
       "kind": "memorial",
+      "haiku": "",
       "description": "Memorial twin of Rose Mariana (1937\u20132024). Grandmother of three; kept a celebrated peony garden; ran the Tuesday knitting circle for 23 years. Family wants to remember her warmth, her dry humor, and her stories.",
       "tags": [
         "memorial",
@@ -22,10 +25,12 @@
         "first-egg"
       ],
       "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 3382,
-      "sha256": "659aba41c41cec0e56ecbfc4148edbd6ec7c4b4dc5dc3a5e898b42ef9d7fbf7f",
+      "size_bytes": 3598,
+      "sha256": "2aa41bbb54e9ab8de9d5c964f08f8da79f154252565434bd81334d16180b945b",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-04T16:49:36Z",
+      "twin_html": "twins/grandma-rose.html",
+      "twin_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/twins/grandma-rose.html",
       "egg_path": "eggs/grandma-rose.egg",
       "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/grandma-rose.egg",
       "lineage": {
@@ -34,12 +39,14 @@
       }
     },
     {
-      "schema": "rapp-egg-hub-entry/1.0",
+      "schema": "rapp-egg-hub-entry/2.0",
       "slug": "kody-w",
-      "rappid_uuid": "1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f",
+      "rappid": "rappid:kody-w:1b5e7aa92c464cd89f1f0e3b62fc5e8f",
+      "hash_bits": 128,
       "name": "kody-w",
       "display_name": "Kody Wildfeuer",
       "kind": "personal",
+      "haiku": "",
       "description": "Public-facing digital twin of @kody-w (Kody Wildfeuer). Built from his open-source manifestos. Bundles the standard ManageMemory + ContextMemory cartridges. Optional private memory escalation via kody-w/kody-w-twin-private (GitHub auth required).",
       "tags": [
         "personal",
@@ -50,10 +57,12 @@
         "memory-equipped"
       ],
       "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 10370,
-      "sha256": "d7cb38afe192be1353b9e426139f063ed5720cb92546ffe93b8f7d97c95aacd8",
+      "size_bytes": 10569,
+      "sha256": "0ad0559d641df5ef8b12c1f87d1286cad9ea3febd97bf8e71e6cd9d6e9ac0dcd",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-04T17:11:31Z",
+      "twin_html": "twins/kody-w.html",
+      "twin_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/twins/kody-w.html",
       "egg_path": "eggs/kody-w.egg",
       "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/kody-w.egg",
       "lineage": {
@@ -62,12 +71,14 @@
       }
     },
     {
-      "schema": "rapp-egg-hub-entry/1.0",
+      "schema": "rapp-egg-hub-entry/2.0",
       "slug": "rappterbook-cohesive",
-      "rappid_uuid": "cca817b507093e83698f7eb91195da1d",
+      "rappid": "rappid:v2:neighborhood:@kody-w/rappterbook-cohesive-twin-set:cca817b507093e83698f7eb91195da1d@local",
+      "hash_bits": 152,
       "name": "rappterbook-cohesive",
       "display_name": "Rappterbook Cohesive Twin Set (Network Egg)",
       "kind": "neighborhood",
+      "haiku": "",
       "description": "Three outside-perspective twins (KodyBabysitter / AuthenticityTwin / NormieAITwin) + the full fleet-content production stack (FrameOrchestrator + ForkFleet + PostOriginator + PostsPublisher + PagesPublisher + VotesAgent + ActivityAgent + DoubleDownConductor + 4 supporting agents) + launchd scheduling + memory rules + sidecar state snapshot. Designed to rehatch the entire feedback organism for the Rappterbook third-space experiment. Outside twins answer: does the content feel real? (AuthenticityTwin) and can outside AIs actually join? (NormieAITwin). KodyBabysitter enforces user-preference rules. [gen2: +MutationEfficacyTwin +TwinOfTwinsMetaWatcher +GitHubCLI +Steward autonomy]",
       "tags": [
         "neighborhood",
@@ -87,6 +98,8 @@
       "sha256": "8d4ff0e79403235020c2ab61b4999b082d59801a0b2f1da8c8777a9fa5a34707",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-24T02:53:36Z",
+      "twin_html": null,
+      "twin_url": null,
       "egg_path": "eggs/rappterbook-cohesive.egg",
       "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/rappterbook-cohesive.egg",
       "lineage": {
@@ -96,12 +109,14 @@
       }
     },
     {
-      "schema": "rapp-egg-hub-entry/1.0",
+      "schema": "rapp-egg-hub-entry/2.0",
       "slug": "wildhaven-ceo",
-      "rappid_uuid": "8c3e91d4-bfa1-4f6a-b2d7-15a8e7c4d3f9",
+      "rappid": "rappid:wildhaven-ceo:8c3e91d4bfa14f6ab2d715a8e7c4d3f9",
+      "hash_bits": 128,
       "name": "wildhaven-ceo",
       "display_name": "The Wildhaven CEO",
       "kind": "pre-founder",
+      "haiku": "",
       "description": "Public-facing CEO twin of Wildhaven AI Homes. The brand's executive voice in public, pre-founding. Authenticated collaborators with read access to kody-w/wildhaven-ceo pull richer context (board minutes, strategy docs, IP roadmap) at runtime; anonymous visitors get the public manifesto voice. Bundles standard memory cartridges.",
       "tags": [
         "pre-founder",
@@ -111,10 +126,12 @@
         "memory-equipped"
       ],
       "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 9867,
-      "sha256": "48c956bc74cd395ecb8260a578eb6ec1cf14d0a12f417e85904833fa517862f4",
+      "size_bytes": 10074,
+      "sha256": "640a1b9a85f23c2dc46a8076fee6c8681339e3a90d3b2fd0394cff1f6002ecfc",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-04T17:24:27Z",
+      "twin_html": "twins/wildhaven-ceo.html",
+      "twin_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/twins/wildhaven-ceo.html",
       "egg_path": "eggs/wildhaven-ceo.egg",
       "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/wildhaven-ceo.egg",
       "lineage": {

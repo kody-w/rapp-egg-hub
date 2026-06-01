@@ -1,7 +1,6 @@
 {
-  "schema": "rapp-egg-hub-entry/1.0",
+  "schema": "rapp-egg-hub-entry/2.0",
   "slug": "wildhaven-ceo",
-  "rappid_uuid": "8c3e91d4-bfa1-4f6a-b2d7-15a8e7c4d3f9",
   "name": "wildhaven-ceo",
   "display_name": "The Wildhaven CEO",
   "github": "https://github.com/kody-w/wildhaven-ceo",
@@ -15,8 +14,8 @@
     "memory-equipped"
   ],
   "egg_schema": "brainstem-egg/2.1",
-  "size_bytes": 9867,
-  "sha256": "48c956bc74cd395ecb8260a578eb6ec1cf14d0a12f417e85904833fa517862f4",
+  "size_bytes": 10074,
+  "sha256": "640a1b9a85f23c2dc46a8076fee6c8681339e3a90d3b2fd0394cff1f6002ecfc",
   "packed_by": "@kody-w",
   "packed_at": "2026-05-04T17:24:27Z",
   "egg_path": "eggs/wildhaven-ceo.egg",
@@ -26,5 +25,7 @@
     "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
   },
   "memory_facts_count": 8,
-  "_note": "CEO seat-as-twin. Pairs with the brand-voice wildhaven-ai-homes-twin variant. Private companion: kody-w/wildhaven-ceo."
+  "_note": "CEO seat-as-twin. Pairs with the brand-voice wildhaven-ai-homes-twin variant. Private companion: kody-w/wildhaven-ceo.",
+  "rappid": "rappid:wildhaven-ceo:8c3e91d4bfa14f6ab2d715a8e7c4d3f9",
+  "haiku": ""
 }

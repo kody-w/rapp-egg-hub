@@ -1,10 +1,12 @@
 # Digital Twin Specification
 
-> **Schema: `rapp-twin-spec/1.0`** &nbsp;·&nbsp; First published: 2026-05-04
+> **Schema: `rapp-twin-spec/2.0`** &nbsp;·&nbsp; First published: 2026-05-04 &nbsp;·&nbsp; v2.0 locked: 2026-06-01
 >
 > The contract for what it means to be a "digital twin" in this ecosystem — how it is identified, how it speaks, how it remembers, how it travels, how it inherits, how it survives. Twins authored against this spec hatch on every rapp-installer'd brainstem today and forever.
 
 This is the **organism spec**. The companion document is the [rappterbox console spec](https://github.com/kody-w/rappterbox/blob/main/SPEC.md), which defines the runtime that hosts twins. Twins live; consoles are substrate.
+
+> **v2.0 is the identity upgrade.** The `rappid` is no longer a UUIDv4 — it is a self-verifying `rappid:<birth-slug>:<64hex>` string derived by SHA-256 from a private germline key. Sections §3–§6 and §9–§10 are unchanged in substance (only `rappid_uuid` references were renamed). §2 (identity), §7 (egg), §8 (hub) were rewritten. §11 (the single-file `.html` twin) and §12 (No PII / secrets) are new. Legacy UUID twins migrate losslessly — see §2.
 
 ---
 
@@ -12,12 +14,13 @@ This is the **organism spec**. The companion document is the [rappterbox console
 
 A digital twin is a **portable digital organism** with:
 
-- **Identity** — a permanent UUIDv4 `rappid` minted at first hatch, never regenerated
+- **Identity** — a permanent, self-verifying `rappid` of the form `rappid:<birth-slug>:<64hex>`, minted at first hatch, never regenerated
 - **Voice** — a `soul.md` system prompt that defines how the twin speaks
 - **Memory** — persistent state under `.brainstem_data/`, accumulating across sessions
 - **Lineage** — a `parent_rappid` chain walking back to the species root
 - **Body** — optional `agents/` directory with twin-specific cartridges
 - **Cartridge** — a portable `.egg` file that captures all of the above
+- **Share artifact** — a single-file `.html` twin that *is* the twin: holo trading card, embedded egg, drag-in hatch agent (see §11)
 
 The twin runs on a brainstem (the runtime). The brainstem is mortal — it's the laptop, the venv, the Python process. The twin is not — it lives in its `.egg`, hatches on any compatible brainstem, retains identity across substrate hops.
 
@@ -33,23 +36,140 @@ The twin runs on a brainstem (the runtime). The brainstem is mortal — it's the
 ## 2. The rappid (identity)
 
 ```json
-"rappid": "1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f"
+"rappid": "rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e6f1a9c3b8d2e5470a1b9c8d7e6f504132"
 ```
 
-- **UUIDv4**, minted exactly once when the twin is first summoned, never regenerated.
-- **Permanent** — survives substrate hops, kernel updates, ownership transfers, and decades of egg roundtrips.
-- **Globally unique** — collision probability is statistical zero; never coordinated, never registered.
-- **Lineage anchor** — `parent_rappid` points at the rappid of the repo whose code this twin was templated from.
+The rappid is a **self-verifying, hash-derived identity string**. It supersedes the v1.0 UUIDv4 entirely.
+
+### Canonical form
+
+```
+rappid:<birth-slug>:<64hex>
+```
+
+- **`<birth-slug>`** — the **immutable human-readable birth name**: the exact `name_slot` that derived the hash. It is the *gene name*. Because the slug is the literal input to the derivation, the string is **self-verifying with no lookup** — anyone holding the lineage key can recompute the hash from the slug and confirm the identity. The slug never changes after birth, even if the twin's `display_name` later changes.
+- **`<64hex>`** — the **full SHA-256 digest**, 256-bit, **NEVER truncated**. This is the authoritative value for matching, dedup, and equality. It carries 2^128 birthday resistance even in a post-Grover world. The slug is the name; the hash is the identity.
+
+The hash is authoritative. The slug is descriptive. When the two ever disagree (e.g. a hand-edited file), the hash wins and the record is malformed.
+
+### Derivation
+
+The rappid hash is derived deterministically from the parent, the private lineage key, and the birth name, with `0x00` byte separators:
+
+```
+child_hash   = sha256( parent_rappid  ‖ 0x00 ‖ lineage_key ‖ 0x00 ‖ name_slot )
+genesis_hash = sha256( "rapp-genesis" ‖ 0x00 ‖ lineage_key )
+```
+
+Both produce the full 64 hex characters. `parent_rappid` is the full canonical parent string (`rappid:<slug>:<64hex>`). `name_slot` is the new twin's birth-slug. The genesis form anchors a brand-new lineage that has no parent.
+
+### The lineage key (private germline)
+
+```
+~/.brainstem/.lineage_key      (mode 0600)
+```
+
+The `lineage_key` is the **private germline — the secret**. Possession of the key *is* the ability to mint new identities in the lineage. A leaked key forges the entire lineage.
+
+- The lineage key **MUST NEVER appear in any egg, any sidecar, any `.html`, or anywhere in the public repo.** It is on the egg-packer exclusion list (§7) and the PII/secrets gate (§12).
+- The key never travels. Eggs carry the *derived* rappid, never the seed that derived it.
+- A `lineage.key_hint` field (a short, non-reversible fingerprint, e.g. first 8 hex of `sha256(lineage_key)`) MAY be recorded for human disambiguation. The hint is not the key and cannot reconstruct it.
+
+### Ownership model — keypair binding (not keyed-hash self-proof)
+
+v1.0 had no ownership proof beyond possession of the file. v2.0 reserves the path to **keypair binding**, so a line **survives the operator's death**:
+
+- A twin binds to a **public key**. Ownership is proven by **signing a challenge** that anyone can verify against the pubkey. The private key **never moves**.
+- Keys can **rotate or be inherited** via **signed succession** — the outgoing key signs an entry endorsing the incoming key. This lets a lineage outlive any single operator or device.
+- These fields are **RESERVED** as of v2.0 and **MAY be empty** today. They fill in progressively as the ecosystem adopts signing. An empty `pubkey` / `sig_suite: "none"` is fully spec-compliant.
+
+> The lineage key proves you can *mint* in the line. The keypair proves you *own* a given twin and can hand it down. They are different mechanisms with different lifetimes — do not conflate them.
+
+### The versionless record
+
+> **HARD RULE: NEVER put a version tag inside the rappid string.** There is no `rappid:v4:…`. The v2/v3 versioned-string approach was the mistake we are correcting.
+
+All new needs go into the **`rappid.json` RECORD** as **additive, optional fields**. The string is permanent and dumb; the record is **versionless and grows**. The record reserves the following fields **now** (empty allowed):
+
+```json
+{
+  "rappid": "rappid:grandma-rose:0d51f2b3...<64hex>",
+  "parent_rappid": "rappid:wildhaven-ai-homes:37ad22f5...<64hex>",
+  "name": "grandma-rose",
+  "display_name": "Grandma Rose",
+  "kind": "memorial",
+  "owner": "@<github-handle>",
+  "haiku": "three rows of peonies / lean toward the back fence each June / her hands in the soil",
+  "born_at": "2026-05-04T16:41:04Z",
+
+  "lineage": {
+    "key_hint": "0d51f2b3",
+    "derivation": "sha256(parent_rappid \u0000 lineage_key \u0000 name_slot)",
+    "name_slot": "grandma-rose"
+  },
+
+  "pubkey": "",
+  "sig_suite": "none",
+  "birth_attestation": null,
+  "key_succession": [],
+  "registry_anchor": null
+}
+```
+
+Reserved additive fields:
+
+| Field | Reserved purpose | Today |
+|---|---|---|
+| `pubkey` | Public key the twin's ownership binds to | may be `""` |
+| `sig_suite` | Signature suite tag: `"none"` → `"ed25519"` → `"ml-dsa-65"` / `"slh-dsa"` | `"none"` |
+| `birth_attestation` | Parent signs each child at mint time (provenance) | may be `null` |
+| `key_succession[]` | Ordered signed succession entries (rotation / inheritance) | `[]` |
+| `registry_anchor` | Optional pointer to where this rappid is anchored in a registry | may be `null` |
+
+Existing record fields retained from 1.x: `rappid`, `parent_rappid`, `name`, `display_name`, `kind`, `owner`, `haiku`, `born_at`, `lineage{ key_hint, derivation, name_slot }`.
+
+### Crypto-agility
+
+The **`sig_suite` tag is migratable** without ever touching the identity. A twin may start at `"none"`, adopt `"ed25519"`, and later migrate to a post-quantum suite — **the identity HASH never changes through a migration.** Only the signing/ownership layer evolves.
+
+**SPHINCS+ / SLH-DSA (hash-based PQC)** is the recommended PQ landing spot precisely because it shares the rappid's *own* trust root — it is built on the same SHA-2 family that already produces the rappid. The identity and its future signatures rest on one hash assumption.
+
+### Properties
+
+- **Permanent** — the `rappid` is minted exactly once at first hatch and never regenerated. It survives substrate hops, kernel updates, ownership transfers, and decades of egg roundtrips.
+- **Self-verifying** — slug + lineage key recompute the hash. No central registry required for verification.
+- **Authoritative by hash** — matching, dedup, and equality use the full 64-hex digest, never the slug, never a prefix.
+- **Lineage anchor** — `parent_rappid` is the full canonical rappid of the code ancestor.
 
 ### The single-parent rule (Constitution Article XXXIV)
 
 A twin's `parent_rappid` declares its **code ancestor** — no exceptions. Three implications:
 
-- A twin templated from `wildhaven-ai-homes-twin` MUST set `parent_rappid` to wildhaven's rappid. Cannot claim rapp-species-root as parent unless it actually inherited rapp's code.
+- A twin templated from `wildhaven-ai-homes-twin` MUST set `parent_rappid` to wildhaven's full canonical rappid. Cannot claim rapp-species-root as parent unless it actually inherited rapp's code.
 - A twin generated by `SummonTwin` defaults to `parent_rappid = wildhaven` (the soul-template structure descends from wildhaven).
 - A twin imported from an `.egg` (`HatchEgg`) preserves whatever lineage was in the egg — transport never rewrites ancestry.
 
-Lineage chains are walkable; eventually every chain terminates at the rapp species root rappid `0b635450-c042-49fb-b4b1-bdb571044dec`.
+Lineage chains are walkable; eventually every chain terminates at the rapp species-root rappid. The genesis-anchored species root has the canonical form `rappid:rapp-genesis:<64hex>`; legacy chains terminating at the old UUID root `0b635450-c042-49fb-b4b1-bdb571044dec` are re-anchored once (see migration below) and remain walkable.
+
+### Legacy migration (LOSSLESS, one-time re-anchor)
+
+v1.0 twins do not break. Migration is documented, deterministic, and **never loses the old identifier** — the prior id is preserved in a `_migrated_from` field on the record, and chains stay walkable.
+
+**Identity is never re-minted on migration** — re-minting would change the bits and break "never regenerated." Migration only *re-shapes the string* around the **same underlying hash**, and records the original in `_migrated_from`. Legacy 128-bit twins are therefore **grandfathered at 128-bit** (a UUID carries only 128 bits of entropy — fabricating 256 would invent a new identity, which is forbidden). New twins mint at full 256-bit. The record's `hash_bits` field states which: `128` (grandfathered) or `256` (native).
+
+| Legacy form | Migration (identity-preserving) |
+|---|---|
+| **UUIDv4** (`1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f`) | **Strip dashes → 32-hex (128-bit), prefix the record slug** → `rappid:<name>:1b5e7aa92c46…`. Same bits, now self-describing. `hash_bits: 128`, `_note_hash` flags it grandfathered. Old UUID kept in `_migrated_from`. |
+| **`rappid:v2:<slug>:<HEX>@gh`** (versioned-string mistake) | **Extract the hash.** The hash becomes the authoritative `<hex>`; the slug becomes `<birth-slug>`. The `@gh` / `v2` decorations are dropped — they were record concerns, not string concerns. Old string kept in `_migrated_from`. |
+| **bare `rappid:<hex>`** (slugless) | **Prepend the record slug.** The `name` from the record becomes `<birth-slug>`, producing `rappid:<name>:<hex>`. Old string kept in `_migrated_from`. |
+
+```json
+"_migrated_from": "1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f",
+"hash_bits": 128,
+"_note_hash": "Grandfathered legacy 128-bit identity (pre-2.0). New twins mint 256-bit."
+```
+
+After migration the old id is never the matching key — the full hash is — but the trail back to v1.0 is permanent. The 256-bit guarantee (§2 derivation) applies to all *newly minted* twins from v2.0 onward.
 
 ---
 
@@ -91,7 +211,7 @@ This block fixes the historical bug where twins fell back to introducing themsel
 
 ### Display name de-slugging
 
-The twin's `name` field in `rappid.json` is a slug (`grandma-rose`, `kody-w`). The display name (used everywhere in soul.md) is the de-slugged form:
+The twin's `name` field in `rappid.json` is a slug (`grandma-rose`, `kody-w`) — and it is also the `<birth-slug>` baked into the rappid. The display name (used everywhere in soul.md) is the de-slugged form:
 
 ```
 "grandma-rose"        → "Grandma Rose"
@@ -99,7 +219,7 @@ The twin's `name` field in `rappid.json` is a slug (`grandma-rose`, `kody-w`). T
 "the-pulse-of-juneau" → "The Pulse Of Juneau"
 ```
 
-When the slug doesn't de-slug well (e.g., `kody-w` → `Kody W`), set `display_name` explicitly in `rappid.json` to override (`"display_name": "Kody Wildfeuer"`).
+When the slug doesn't de-slug well (e.g., `kody-w` → `Kody W`), set `display_name` explicitly in `rappid.json` to override (`"display_name": "Kody Wildfeuer"`). The display name is mutable; the birth-slug is not.
 
 ---
 
@@ -111,7 +231,7 @@ Memory lives under `<workspace>/.brainstem_data/`:
 <workspace>/
 └── .brainstem_data/
     ├── memory.json           ← the persistent fact corpus
-    ├── identity.json         ← the egg-rappid (rappid:twin:@pub/slug:entropy)
+    ├── identity.json         ← the local identity cache (canonical rappid)
     ├── conversations/        ← chat history per session (optional)
     ├── soul_history/         ← timestamped backups of every soul.md edit
     │   ├── 2026-05-04T16-41-04Z-add-brunch-section.md
@@ -148,6 +268,7 @@ The Twin agent's `update_soul` action enforces this automatically.
 
 Anything under `<workspace>/.brainstem_data/private/` is **local-only** and MUST be excluded from `.egg` packing. The egg packer's exclusion list:
 
+- `.lineage_key` (the private germline — see §2, §12)
 - `.copilot_token`, `.copilot_session`, `voice.zip` (auth secrets)
 - `.env`, `.env.local`
 - `__pycache__/`, `.pytest_cache/`, `venv/`, `.git/`
@@ -221,8 +342,8 @@ Twins MAY ship additional cartridges in `agents/` for twin-specific capabilities
   "exported_at": "2026-05-04T17:00:00Z",
   "exported_by": "@kody-w/twin_agent",
   "source": {
-    "rappid_uuid": "1b5e7aa9-...",
-    "parent_rappid_uuid": "37ad22f5-...",
+    "rappid": "rappid:grandma-rose:0d51f2b3...<64hex>",
+    "parent_rappid": "rappid:wildhaven-ai-homes:37ad22f5...<64hex>",
     "repo": "https://github.com/<owner>/<repo>.git",
     "commit": "<git SHA at pack time | null>",
     "name": "<slug>"
@@ -236,9 +357,16 @@ Twins MAY ship additional cartridges in `agents/` for twin-specific capabilities
   "bundled_state": true,
   "repo_file_count": <int>,
   "data_file_count": <int>,
+
+  "pubkey": "",
+  "sig_suite": "none",
+  "birth_attestation": null,
+  "registry_anchor": null,
   "attestation": null
 }
 ```
+
+> **Renamed in v2.0:** `source.rappid_uuid` → `source.rappid` and `source.parent_rappid_uuid` → `source.parent_rappid`, now carrying full canonical `rappid:<slug>:<64hex>` strings. The reserved ownership fields (`pubkey`, `sig_suite`, `birth_attestation`, `registry_anchor`) mirror the record (§2) and MAY be empty. **The `.lineage_key` is NEVER present in a manifest or anywhere in an egg.**
 
 ### Payload layout
 
@@ -254,11 +382,11 @@ Twins MAY ship additional cartridges in `agents/` for twin-specific capabilities
 │   └── installer/                      ← optional kernel pin
 └── data/                               ← .brainstem_data tree (when bundled_state)
     ├── memory.json                     ← persistent facts
-    ├── identity.json                   ← egg-rappid
+    ├── identity.json                   ← local identity cache (canonical rappid)
     └── conversations/                  ← optional chat history
 ```
 
-`soul_history/` is intentionally NOT included — receivers don't need the donor's edit log.
+`soul_history/` is intentionally NOT included — receivers don't need the donor's edit log. `.lineage_key`, `private/`, and all auth secrets are excluded per §2/§4/§12.
 
 ### Schema versions
 
@@ -276,25 +404,28 @@ Twin authoring should target `2.1` unless there's a specific reason to use a dif
 A twin egg is **viable** when:
 
 - ✓ Manifest parses, schema is `brainstem-egg/2.x`
-- ✓ `repo/rappid.json` exists with valid `rappid` (UUID4) field
+- ✓ `repo/rappid.json` exists with a valid canonical `rappid` (`rappid:<birth-slug>:<64hex>`, 64 lowercase hex, slug matches `lineage.name_slot`)
 - ✓ `repo/soul.md` exists and is non-empty
-- ✓ `parent_rappid` lineage is valid (single-parent rule honored)
+- ✓ `parent_rappid` lineage is valid and canonical (single-parent rule honored)
+- ✓ No `.lineage_key`, no auth secrets, no PII anywhere in the payload (§12)
 
-Eggs without these are NOT hatchable. The Twin agent's `hatch` action verifies viability before reporting success.
+Eggs without these are NOT hatchable. The Twin agent's `hatch` action verifies viability before reporting success. Legacy UUID eggs are accepted but trigger the one-time re-anchor migration (§2) on hatch.
 
 ---
 
 ## 8. Hub conventions (`rapp-egg-hub`)
 
-This repo is the public catalog of `.egg` cartridges. Layout:
+This repo is the public catalog of `.egg` cartridges (and their `.html` twins — §11). Layout:
 
 ```
 rapp-egg-hub/
 ├── eggs/
-│   ├── <slug>.egg              ← the egg itself
+│   ├── <slug>.egg              ← the raw egg (no file association — see §11)
+│   ├── <slug>.html             ← the single-file .html twin (PRIMARY share artifact)
 │   └── <slug>.json             ← sidecar manifest (this spec)
 ├── agents/                     ← drop-in cartridges (Twin, Estate)
 ├── scripts/rebuild_index.py
+├── scripts/pii_gate.py         ← pre-publish PII / secrets scanner (§12)
 ├── .github/workflows/rebuild-index.yml
 ├── index.json                  ← auto-generated catalog
 ├── index.html                  ← Pages UI
@@ -302,15 +433,15 @@ rapp-egg-hub/
 └── SPEC.md                     ← this document
 ```
 
-### Sidecar manifest (`rapp-egg-hub-entry/1.0`)
+### Sidecar manifest (`rapp-egg-hub-entry/2.0`)
 
 Every egg in the hub has a sidecar JSON next to it. Schema:
 
 ```json
 {
-  "schema": "rapp-egg-hub-entry/1.0",
+  "schema": "rapp-egg-hub-entry/2.0",
   "slug": "kody-w",
-  "rappid_uuid": "1b5e7aa9-...",
+  "rappid": "rappid:kody-w:1b5e7aa9...<64hex>",
   "name": "kody-w",
   "display_name": "Kody Wildfeuer",
   "github": "https://github.com/<owner>",
@@ -320,20 +451,28 @@ Every egg in the hub has a sidecar JSON next to it. Schema:
   "egg_schema": "brainstem-egg/2.1",
   "size_bytes": 10370,
   "sha256": "<hex>",
+  "html_path": "eggs/<slug>.html",
+  "html_sha256": "<hex>",
   "packed_by": "@<github-handle>",
   "packed_at": "<ISO timestamp>",
   "egg_path": "eggs/<slug>.egg",
   "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/<slug>.egg",
   "lineage": {
-    "parent_rappid": "<UUID>",
+    "parent_rappid": "rappid:<parent-slug>:<64hex>",
     "parent_repo": "<URL>"
-  }
+  },
+
+  "pubkey": "",
+  "sig_suite": "none",
+  "registry_anchor": null
 }
 ```
 
-### `index.json` (`rapp-egg-hub/1.0`)
+> **Renamed in v2.0:** `rappid_uuid` → `rappid`, and `lineage.parent_rappid` now carries the full canonical string. Added: `html_path` / `html_sha256` (the `.html` twin), plus the reserved `pubkey` / `sig_suite` / `registry_anchor` mirror of the record (MAY be empty). The sidecar **MUST NOT** contain `.lineage_key` or any PII (§12).
 
-Aggregated catalog of every sidecar in `eggs/`. Auto-regenerated by `scripts/rebuild_index.py` on every push (see `.github/workflows/rebuild-index.yml`). Hub maintainers don't edit this by hand — drop egg + sidecar, push, the action regenerates.
+### `index.json` (`rapp-egg-hub/2.0`)
+
+Aggregated catalog of every sidecar in `eggs/`. Auto-regenerated by `scripts/rebuild_index.py` on every push (see `.github/workflows/rebuild-index.yml`). Hub maintainers don't edit this by hand — drop egg + `.html` + sidecar, push, the action regenerates. The rebuild action runs `scripts/pii_gate.py` first and fails the build if anything trips the gate (§12).
 
 ### Twin kinds (canonical values)
 
@@ -356,14 +495,14 @@ The Twin agent (`@kody-w/twin_agent` in RAR, `agents/twin_agent.py` in this hub)
 
 | Action | Semantics |
 |---|---|
-| `summon` | Birth a fresh twin. Mints rappid, writes workspace from a soul template (kind). |
-| `hatch` | Import an existing twin from a `.egg` (local file via `egg_path` OR remote URL via `egg_url`). sha256-verifies if expected hash known. |
+| `summon` | Birth a fresh twin. Mints the canonical rappid (`child_hash`/`genesis_hash` from `~/.brainstem/.lineage_key`), writes workspace from a soul template (kind). |
+| `hatch` | Import an existing twin from a `.egg` (local file via `egg_path` OR remote URL via `egg_url`) or from a `.html` twin. sha256-verifies if expected hash known. Re-anchors legacy UUID identities once (§2). |
 | `boot` | Start the twin as its own brainstem on a fresh port (auto-allocates 7081–7200). Returns the chat URL. |
 | `stop` | SIGTERM a running twin; clean up pid/port files. |
 | `list` | Quick text list of every twin on this device + running status. |
-| `update_identity` | Append the v1.0.1 identity block to an older twin's soul.md (idempotent, append-only, backs up first). |
+| `update_identity` | Append the current identity block to an older twin's soul.md (idempotent, append-only, backs up first). |
 | `update_soul` | Fully replace a twin's soul.md with new content. ALWAYS backs up to `soul_history/` first. |
-| `lay_egg` | Pack a twin's workspace into a portable `.egg` cartridge + matching sidecar JSON ready for hub PR. |
+| `lay_egg` | Pack a twin's workspace into a portable `.egg` cartridge + `.html` twin + matching sidecar JSON ready for hub PR. Runs the PII/secrets gate (§12) before producing artifacts. |
 
 The Estate agent (`@kody-w/estate_agent` in RAR, `agents/estate_agent.py` in this hub) provides read-only inspection:
 
@@ -408,63 +547,141 @@ employment without explicit user confirmation that the human is in
 the loop. This is a hard limit, not a default.
 ```
 
-This rule is non-negotiable. Twins shipped to the hub without an impersonation hard-rule fail the compliance check (see §13).
+This rule is non-negotiable. Twins shipped to the hub without an impersonation hard-rule fail the compliance check (see §15).
 
 ---
 
-## 11. Integrity and attestation
+## 11. The single-file `.html` twin
+
+**The `.html` twin IS the twin** — in the same way `agent.py` *is* the agent, the single-file `.html` *is* the share artifact. It is the **PRIMARY** thing a contributor hands to another human. The raw `.egg` still exists in `eggs/`, but it has **no file association** — double-clicking does nothing useful for a normal person, which is exactly the point. People share the `.html`; the brainstem still reads the `.egg`.
+
+A `.html` twin is a self-contained, dependency-free page that:
+
+### Renders a holo trading card (RAR `rapp-card`)
+
+The card is deterministically generated — same twin, same card, forever — from the twin's name:
+
+- **Seed:** `seed = seed_hash(name)` — a stable integer derived from the twin's `name` slug.
+- **PRNG:** a `mulberry32(seed)` generator drives all visual + stat rolls (deterministic, reproducible across machines, no network).
+- **Stats:** five stats — **HP / ATK / DEF / SPD / INT** — each rolled into the range **10–100**.
+- **Tier:** derived from the stat total (bands map total → tier label).
+
+The card is the "holo" face: foil/shine treatment, the twin's `display_name`, `kind`, `haiku`, and lineage at a glance.
+
+### Bakes the egg in as base64
+
+The full `.egg` is embedded as a base64 blob inside the `.html`. The page is therefore the complete cartridge — nothing else needs to travel.
+
+### Downloads JS-FREE via `data:` URI anchors
+
+Downloading the egg out of the page does **NOT require JavaScript**. The egg is offered through plain `<a href="data:application/octet-stream;base64,…" download="<slug>.egg">` anchors. This means the download works **in Microsoft Teams' link/file preview with JavaScript disabled** — the single most common place a twin is shared. JS may *enhance* the card (animation, shine) but MUST NOT be *required* to retrieve the egg or the hatch agent.
+
+### Exports a drag-in, self-bootstrapping hatch `agent.py`
+
+The page also offers — again via a JS-free `data:` anchor — a self-bootstrapping **`*_agent.py`** that the recipient drops straight into their `agents/` directory. On first run it decodes the embedded egg and hatches the twin locally. No CLI, no clone: drag the file in, the twin appears. This is drop-in compatible with any unmodified brainstem.
+
+### Hub placement
+
+Both artifacts ship side by side: `eggs/<slug>.egg` (raw, no association) and `eggs/<slug>.html` (the twin). The sidecar records `html_path` + `html_sha256` (§8). The `.html` is subject to the same **NO PII / secrets** rule as everything else — see §12.
+
+---
+
+## 12. No PII / secrets (MANDATORY)
+
+> **HARD RULE: NO PII and NO secrets anywhere in the public repo or in any egg, sidecar, or `.html` twin.** This is non-negotiable and it is enforced mechanically.
+
+Forbidden in any public artifact (repo, `.egg`, `.html`, sidecar, index):
+
+- **Emails** — except the explicitly allowed forms: `noreply@…`, `@rapp`, `@microsoft.com`, `@example.com`
+- **Phone numbers, SSNs / national IDs**
+- **Tokens / secrets of any kind** — including `.lineage_key`, `.copilot_token`, `.copilot_session`, `.env` / `.env.local`, API keys, OAuth tokens
+- **Customer names and named-person personal data** — any data tied to an identifiable real individual
+
+The `.lineage_key` is the **private germline (§2)** — a leak forges the whole lineage. It is the highest-severity item on this list and MUST NEVER leave the local machine.
+
+### Enforcement: `scripts/pii_gate.py`
+
+`scripts/pii_gate.py` is the **pre-publish gate**. It scans the egg payload, the `.html` twin, the sidecar, and any staged repo files for the patterns above. It runs:
+
+1. At **pack time** — `lay_egg` (§9) runs the gate before emitting `.egg` / `.html` / sidecar artifacts.
+2. At **hub publish time** — the `rebuild-index` workflow (§8) runs the gate first and **fails the build** if anything trips it.
+
+Nothing that fails the gate may be published. The exclusion list (also enforced by the egg packer, §4) includes at minimum:
+
+```
+.lineage_key
+.copilot_token
+.copilot_session
+.env
+.env.local
+voice.zip
+.brainstem_data/private/
+```
+
+A contributor who needs private depth uses the auth-gated private companion (§5) — never inlined secrets.
+
+---
+
+## 13. Integrity and attestation
 
 ### Phase 1 (shipped today): sha256 content integrity
 
-Every egg in this hub publishes its sha256 in the sidecar JSON. The Twin agent's `hatch` action:
+Every egg in this hub publishes its sha256 in the sidecar JSON (and the `.html` publishes `html_sha256`). The Twin agent's `hatch` action:
 
-1. Downloads or reads the egg
+1. Downloads or reads the egg (or extracts it from a `.html` twin)
 2. If `egg_url` matches the hub URL pattern, auto-fetches the matching sidecar
 3. Computes local sha256
 4. Refuses to hatch if mismatched
 
 Or pass `expect_sha256=` to the hatch action explicitly. This is content integrity — confirms the bytes weren't tampered between hub and hatcher.
 
-### Phase 2 (Article XXXIV.7, future): publisher signatures
+### Phase 2 (keypair binding): publisher + birth signatures
 
-The `attestation` slot in every brainstem-egg/2.1 manifest is wired and ready for ed25519 publisher signatures. When phase 2 ships:
+v2.0 reserves the full signing surface (§2): the record and manifest carry `pubkey`, `sig_suite`, `birth_attestation`, `key_succession[]`, and `registry_anchor`. As these fill in:
 
-- Each publisher (`@<handle>`) registers a public key
-- Every egg's manifest carries an `attestation` envelope signed by the publisher's release key
-- Hatch-time verification: signature → public key → publisher identity confirmed
+- Each publisher binds to a **public key** (`pubkey`), declaring a `sig_suite` (`ed25519` → PQC).
+- Every child carries a **`birth_attestation`** — the parent signs the child at mint time, proving provenance up the chain.
+- Ownership is proven by **signing a challenge** verifiable against the pubkey; the private key never moves.
+- Keys rotate or inherit through **`key_succession[]`** signed entries, so a line survives the operator's death.
 
-Until phase 2 ships, sha256 is the baseline. It's enough to detect tampering between hub and hatcher; it doesn't yet prove who originally published.
+Crucially, **migrating the signature suite never changes the identity hash** (§2 crypto-agility). SLH-DSA / SPHINCS+ is the PQ landing spot because it shares the rappid's own hash trust root.
+
+Until phase 2 fills in, `sig_suite: "none"` + sha256 is the baseline. It detects tampering between hub and hatcher; it doesn't yet prove who originally published.
 
 ---
 
-## 12. Versioning and stability
+## 14. Versioning and stability
 
-This document is `rapp-twin-spec/1.0`. The schema is **frozen forever**. Future spec versions are additive only.
+This document is `rapp-twin-spec/2.0`. **The `rappid` *string* form is frozen forever** — `rappid:<birth-slug>:<64hex>`, no version tag, ever. **The `rappid.json` RECORD is versionless and additive** — new needs become new optional fields, never new string forms. Future spec versions are additive only; old readers ignore unknown fields.
 
 ### Schemas referenced
 
 | Schema | Purpose |
 |---|---|
-| `rapp-twin-spec/1.0` | this document |
-| `rapp-rappid/1.1` | rappid.json shape (lineage anchor) |
+| `rapp-twin-spec/2.0` | this document |
+| `rapp-rappid/2.0` | rappid.json record shape (hash-derived identity + reserved ownership fields) |
 | `brainstem-egg/2.1` | egg cartridge format (default for twins) |
-| `rapp-egg-hub-entry/1.0` | sidecar JSON in this hub |
-| `rapp-egg-hub/1.0` | catalog (`index.json`) |
+| `rapp-egg-hub-entry/2.0` | sidecar JSON in this hub |
+| `rapp-egg-hub/2.0` | catalog (`index.json`) |
 | `rapp-agent/1.0` | the cartridge manifest format (Twin, Estate, etc.) |
 | `rapp-peers/1.1` | local peer registry (rappterbox console) |
 
-Cartridges, eggs, and twins authored against any 1.x version of these schemas are forward-compatible — old readers ignore unknown fields; old writers produce data that newer readers accept.
+Cartridges, eggs, and twins authored against any 1.x or 2.x version of these schemas remain hatchable. v1.0 UUID identities re-anchor losslessly on first hatch (§2); the prior id is preserved in `_migrated_from` and chains stay walkable.
 
 ---
 
-## 13. Compliance checklist
+## 15. Compliance checklist
 
 A twin egg ships hub-compliant when ALL of the following are true:
 
 ### Identity
-- [ ] `rappid.json` has a valid `rappid` (UUIDv4)
-- [ ] `parent_rappid` set; chain walks back to rapp species root (`0b635450-…`)
+- [ ] `rappid.json` has a valid canonical `rappid` (`rappid:<birth-slug>:<64hex>`, full untruncated 64 lowercase hex)
+- [ ] `<birth-slug>` equals `lineage.name_slot` (self-verifying)
+- [ ] `parent_rappid` set as a full canonical rappid; chain walks back to the rapp species root
 - [ ] Single-parent rule honored — `parent_rappid` is the actual code-ancestor
+- [ ] NO version tag in the rappid string (no `rappid:v4:…`)
+- [ ] Reserved record fields present (empty allowed): `pubkey`, `sig_suite`, `birth_attestation`, `key_succession`, `registry_anchor`
+- [ ] If migrated from v1.0: old id preserved in `_migrated_from`
 - [ ] `name` is a valid slug (lowercase, hyphens/underscores OK)
 - [ ] `display_name` set if slug doesn't de-slug cleanly
 
@@ -482,34 +699,45 @@ A twin egg ships hub-compliant when ALL of the following are true:
 
 ### Egg
 - [ ] Schema is `brainstem-egg/2.x`
-- [ ] Manifest valid; required fields present
-- [ ] Exclusion list honored (no .env, no __pycache__, no auth tokens)
-- [ ] Egg viable per §7 (parses, has rappid + soul)
+- [ ] Manifest valid; `source.rappid` / `source.parent_rappid` are canonical strings
+- [ ] Exclusion list honored — **no `.lineage_key`**, no .env, no __pycache__, no auth tokens
+- [ ] Egg viable per §7 (parses, has canonical rappid + soul)
+
+### Share artifact (§11)
+- [ ] `eggs/<slug>.html` single-file twin present
+- [ ] Egg + hatch `agent.py` downloadable JS-FREE via `data:` URI anchors
+- [ ] Holo card renders deterministically from `seed_hash(name)`
+
+### PII / secrets (§12)
+- [ ] `scripts/pii_gate.py` passes on the egg, `.html`, sidecar, and staged files
+- [ ] No emails (except allowed forms), phones, SSNs, tokens, customer/named-person data
+- [ ] `.lineage_key` is NOT present anywhere in any published artifact
 
 ### Hub
-- [ ] Sidecar JSON at `eggs/<slug>.json` matches `rapp-egg-hub-entry/1.0`
-- [ ] sha256 in sidecar matches actual file hash
-- [ ] PR open against the hub repo (`rebuild_index.py` will regenerate `index.json` automatically)
+- [ ] Sidecar JSON at `eggs/<slug>.json` matches `rapp-egg-hub-entry/2.0`
+- [ ] sha256 in sidecar matches actual file hash; `html_sha256` matches the `.html`
+- [ ] PR open against the hub repo (`rebuild_index.py` regenerates `index.json`; PII gate must pass)
 
 ### Lineage & private layer (optional)
 - [ ] If `private_companion` declared: URL templates valid, auth scheme documented
-- [ ] If publisher-signed (phase 2): attestation envelope verifies against publisher's release key
+- [ ] If publisher-signed (phase 2): `birth_attestation` / `key_succession` verify against the bound `pubkey`
 
 ---
 
-## 14. References
+## 16. References
 
 - [`README.md`](./README.md) — install + hatch + contribution guide
 - [`agents/twin_agent.py`](./agents/twin_agent.py) — full lifecycle implementation
 - [`agents/estate_agent.py`](./agents/estate_agent.py) — read-only inspection
 - [`scripts/rebuild_index.py`](./scripts/rebuild_index.py) — hub catalog regenerator
+- [`scripts/pii_gate.py`](./scripts/pii_gate.py) — pre-publish PII / secrets gate (§12)
 - [Constitution Articles XXXII–XXXV](https://github.com/kody-w/RAPP/blob/main/CONSTITUTION.md) — kernel sacredness, lineage protocol, license stability
 - [rappterbox SPEC](https://github.com/kody-w/rappterbox/blob/main/SPEC.md) — the runtime spec; this document is its companion
-- [RAR](https://github.com/kody-w/RAR) — public catalog of cartridges (`twin_agent`, `estate_agent`, etc.)
+- [RAR](https://github.com/kody-w/RAR) — public catalog of cartridges (`twin_agent`, `estate_agent`, `rapp-card`, etc.)
 - [`Twin-Patterns.md`](https://github.com/kody-w/RAPP/blob/main/pages/vault/Architecture/Twin-Patterns.md) — solo / parallel-omniscience / twin-squared / cross-twin patterns
 
 ---
 
-## 15. Conformance notice
+## 17. Conformance notice
 
-A twin authored against `rapp-twin-spec/1.0` will hatch and run on every rappterbox console install today and forever. The schemas are frozen; the cartridge contract is locked; the impersonation hard rule is non-negotiable. The hub will not accept eggs that fail §13 — that's the compact between contributors and downstream hatchers.
+A twin authored against `rapp-twin-spec/2.0` will hatch and run on every rappterbox console install today and forever. The `rappid` string form is frozen; the record is versionless and additive; the impersonation hard rule is non-negotiable; the NO-PII rule is mechanically enforced. Legacy UUID twins re-anchor losslessly on first hatch and their chains stay walkable. The hub will not accept eggs that fail §15 — that's the compact between contributors and downstream hatchers.

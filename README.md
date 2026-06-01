@@ -1,130 +1,77 @@
 # rapp-egg-hub
 
-> **A public hub for digital-twin `.egg` cartridges. Pull any egg by URL, hatch it locally — your brainstem becomes the home of that twin in 30 seconds.**
+> **A public hub for digital twins you can hold in your hand.** Open a twin in your browser, click **Get**, drag the downloaded agent into your RAPP brainstem — and the twin is now yours, living locally, in about 30 seconds.
 
-A `.egg` is a portable digital twin: a zip cartridge containing a `rappid.json` (lineage), a `soul.md` (the twin's voice), conversation memory, and any local mutations the original keeper made. This hub hosts public eggs anyone can pull and hatch on their own [rapp-installer](https://github.com/kody-w/rapp-installer)'d brainstem.
+A twin is a portable being: a `rappid.json` (its identity + lineage), a `soul.md` (its voice), conversation memory, and any mutations its keeper made. This hub now ships every twin as a **single-file `.html`** — the primary way normal people get and trade twins — with the raw `.egg` cartridge kept alongside for the Twin agent.
 
-## What's here today
+## The single-file `.html` twin
 
-| Slug | Display name | Kind | Size | Description |
-|---|---|---|---|---|
-| **grandma-rose** | Grandma Rose | memorial | 3.3 KB | First egg in the hub. Memorial twin of Rose Mariana (1937–2024) — grandmother of three; kept a celebrated peony garden; ran the Tuesday knitting circle for 23 years. |
+The `.html` **is** the twin (the way `agent.py` *is* the agent). Open one in any browser and you get:
 
-## Hatch any egg in three commands
+- A **holo trading card** — the twin's RAR rapp-card, with a deterministically-generated portrait and five stats (HP / ATK / DEF / SPD / INT, each 10–100) plus a tier. Same name always rolls the same card.
+- The full egg **baked in as base64** — nothing else to download, nothing to host.
+- **JS-free downloads** via `data:` URI links. The Get buttons work even in Teams preview with JavaScript disabled, so you can pass a twin around a chat and anyone can pull it.
+- A drag-in **hatch `agent.py`** — drop it into `~/.brainstem/src/rapp_brainstem/agents/` and on first run it self-bootstraps: unpacks the baked egg, materializes the twin's workspace, and brings it home. No commands to copy.
 
-```bash
-# 1. Install the brainstem (the static-ancestor substrate)
-curl -fsSL https://kody-w.github.io/rapp-installer/install.sh | bash
+That's the whole flow for most people: **open → Get → drag → done.**
 
-# 2. Drop in the agent cartridges — Twin (lifecycle) + Estate (monitoring)
-curl -fsSL https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/agents/twin_agent.py \
-     -o ~/.brainstem/src/rapp_brainstem/agents/twin_agent.py
-curl -fsSL https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/agents/estate_agent.py \
-     -o ~/.brainstem/src/rapp_brainstem/agents/estate_agent.py
+> Power users and the Twin agent can still grab the raw `.egg` directly — it's kept in `eggs/` with no file association, on purpose, so ordinary folks reach for the `.html`.
 
-# 3. Boot the brainstem
-bash ~/.brainstem/src/rapp_brainstem/start.sh
-```
+## Identity: the rappid (a twin's DNA)
 
-Then in the chat at <http://127.0.0.1:7071/>:
+Every twin carries a permanent name written like `rappid:<birth-slug>:<64hex>` — for example `rappid:grandma-rose:0d51f2b3…` (64 hex characters). It is **readable** (the birth-slug is the twin's immutable gene name, so you know who it is at a glance, no lookup), **permanent** (the 64-hex full SHA-256 is the authoritative fingerprint — never truncated, never re-versioned), and built to be **ownership-provable** (the record reserves keypair-binding fields so a twin can one day prove who keeps it by signing a challenge, and a line can survive its operator through signed key succession). The identity hash never changes — new capabilities are added as optional fields in the `rappid.json` record, never baked into the string.
 
-> *"Hatch the egg at https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/grandma-rose.egg, then boot her."*
+## The one hard rule: no PII
 
-The Twin cartridge fetches the egg, sha256-verifies against the published sidecar, materializes the workspace at `~/.rapp/twins/<rappid>/`, boots a second brainstem on a fresh port pointed at her soul, and gives you the URL to chat with her. **Same rappid as wherever the egg was packed**; identity, memory, and mutations preserved.
+**Nothing in this public repo — no twin, no egg, no card — may contain personally identifiable information.** No real emails (only `noreply`/`@rapp`/`microsoft.com`/`example.com`), no phone numbers, SSNs, tokens or secrets, no `.lineage_key` / `.copilot_token` / `.env`, no customer names or named-person data. The private germline key (`~/.brainstem/.lineage_key`) is never packed into any egg — possessing it would let someone forge a whole lineage.
 
-Use `Estate` to monitor what's running:
-
-> *"What twins do I have? Show me their status."*
-
-The Estate cartridge reports running/stopped, soul-edit history, egg backups, and the family tree.
-
-## Agents bundled in this hub
-
-Two single-file cartridges live alongside the eggs — pull them as part of any hub install:
-
-| File | Tool name | What it does |
-|---|---|---|
-| [`agents/twin_agent.py`](./agents/twin_agent.py) | **Twin** | Full lifecycle — `summon`, `hatch` (local file or URL), `boot`, `stop`, `list`, `update_identity`, `update_soul` (with timestamped soul history backups), `lay_egg` (pack a twin you own → sha256-stamped sidecar ready to PR back here). |
-| [`agents/estate_agent.py`](./agents/estate_agent.py) | **Estate** | Read-only monitoring — `overview`, `inspect <rappid>`, `history` (soul edit timeline), `eggs` (every backup on disk), `lineage` (parent_rappid family tree). |
-
-Both also live at [`kody-w/RAR`](https://github.com/kody-w/RAR/tree/main/agents/@kody-w) for cross-referencing with the broader RAR catalog.
+This is enforced, not just asked: **`scripts/pii_gate.py`** scans every twin, egg, and card before it lands. PRs that trip the gate don't merge. Run it locally before you contribute.
 
 ## Layout
 
 ```
 rapp-egg-hub/
-├── eggs/
-│   ├── <slug>.egg                 ← the .egg cartridge (zip with manifest + repo + state)
-│   └── <slug>.json                ← sidecar metadata: rappid, sha256, description, tags
-├── index.json                     ← catalog (schema rapp-egg-hub/1.0) — list of all eggs
-├── index.html                     ← browseable UI (GitHub Pages)
+├── twins/                  ← the single-file .html twins (the share artifact — open in a browser)
+│   └── <slug>.html
+├── eggs/                   ← raw .egg cartridges for the Twin agent
+│   └── <slug>.egg
+├── scripts/
+│   ├── pii_gate.py         ← scans everything for PII; gates contributions
+│   └── rebuild_index.py    ← regenerates the catalog from twins/ + eggs/
+├── index.json              ← machine-readable catalog
+├── index.html              ← browseable gallery (GitHub Pages)
+├── SPEC.md                 ← the frozen digital-twin + identity specification
 └── README.md
 ```
 
-The sidecar JSON is enough to browse the hub without unzipping any eggs. The full manifest lives inside the egg's `manifest.json` (schema `brainstem-egg/2.x`).
+## Get a twin (the normal way)
 
-## Discovery
+1. Browse the gallery: <https://kody-w.github.io/rapp-egg-hub/>
+2. Open any twin's `.html` and click **Get** — the hatch `agent.py` downloads.
+3. Drag it into `~/.brainstem/src/rapp_brainstem/agents/`.
+4. Boot your brainstem — the twin bootstraps itself and comes home.
 
-The hub's catalog is publicly readable JSON:
+Don't have a brainstem yet? Install it first:
 
 ```bash
-curl -s https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/index.json | jq .
+curl -fsSL https://kody-w.github.io/rapp-installer/install.sh | bash
 ```
 
-Browseable HTML view: <https://kody-w.github.io/rapp-egg-hub/>
+## Contributing a twin
 
-## Specification
-
-The full digital-twin specification lives at [`SPEC.md`](./SPEC.md) — schema `rapp-twin-spec/1.0`, frozen. It defines what a twin is (rappid + soul + memory + lineage + body), the egg format (`brainstem-egg/2.x`), the hub conventions (sidecar JSON + auto-rebuild), the lifecycle operations (`summon`/`hatch`/`boot`/`stop`/`update_soul`/`lay_egg`), the impersonation hard rule (every twin must distinguish itself from the human/thing it represents), and the compliance checklist for hub contributions. Read SPEC.md before authoring an egg you want others to hatch.
-
-## Contributing an egg
-
-1. Pack a twin into an `.egg` with the Twin agent (or any `brainstem-egg/2.x` packer).
-2. Drop the `.egg` into `eggs/<your-slug>.egg`.
-3. Add a sidecar at `eggs/<your-slug>.json` matching the schema below.
-4. Regenerate `index.json` (script coming; for now hand-edit).
+1. Pack a twin you own into an `.egg` and render its `.html` with the Twin agent.
+2. Drop `twins/<slug>.html` and `eggs/<slug>.egg` into place.
+3. Run **`python scripts/pii_gate.py`** — if it flags anything, fix it; PII never ships.
+4. Run **`python scripts/rebuild_index.py`** to regenerate `index.json`.
 5. Open a PR.
 
-### Sidecar schema (`rapp-egg-hub-entry/1.0`)
-
-```json
-{
-  "schema": "rapp-egg-hub-entry/1.0",
-  "slug": "grandma-rose",
-  "rappid_uuid": "0d51f2b3-...",
-  "name": "grandma-rose",
-  "display_name": "Grandma Rose",
-  "kind": "memorial",
-  "description": "One-paragraph human-readable description.",
-  "tags": ["memorial", "grandmother"],
-  "egg_schema": "brainstem-egg/2.1",
-  "size_bytes": 3382,
-  "sha256": "<hex>",
-  "packed_by": "@<github-handle>",
-  "packed_at": "<ISO timestamp>",
-  "egg_path": "eggs/<slug>.egg",
-  "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/<slug>.egg",
-  "lineage": {
-    "parent_rappid": "<UUID>",
-    "parent_repo": "<URL>"
-  }
-}
-```
-
-### Trust + safety
-
-- Eggs are zips — anyone can `unzip` to inspect before hatching. Always do this for eggs from strangers.
-- The `sha256` in the sidecar lets you verify the egg you downloaded matches what the contributor published.
-- Currently no signing layer (Constitution Article XXXIV.7 is rolling in upstream). When attestation ships, eggs will carry a signed envelope from the publisher's release key.
-- `quality_tier` field reserved for future curation (`unverified` / `community` / `verified` / `featured`).
+Read [`SPEC.md`](./SPEC.md) before authoring a twin others will hatch — it defines what a twin is, the rappid identity, the egg and `.html` formats, the impersonation rule (every twin must distinguish itself from the human or thing it represents), and the contribution checklist.
 
 ## Related
 
-- [`kody-w/RAR`](https://github.com/kody-w/RAR) — the public catalog of agent cartridges (`*_agent.py` files). Where the `Twin` agent lives.
+- [`kody-w/RAR`](https://github.com/kody-w/RAR) — the public catalog of agent cartridges, where the `Twin` agent lives.
 - [`kody-w/rapp-installer`](https://kody-w.github.io/rapp-installer/install.sh) — the canonical brainstem installer.
-- [`kody-w/rappterbox`](https://github.com/kody-w/rappterbox) — the bundled console package (brainstem + Wii Sports cartridges + dashboard + the twin expansion pack).
-- [`kody-w/wildhaven-ai-homes-twin`](https://github.com/kody-w/wildhaven-ai-homes-twin) — the parent variant most twins descend from.
 
 ## License
 
-All Rights Reserved. Each individual egg's contents inherit the license posture chosen by their original keeper — check `repo/LICENSE` inside the egg.
+All Rights Reserved. Each twin's contents inherit the license posture its original keeper chose — check `repo/LICENSE` inside the egg.
