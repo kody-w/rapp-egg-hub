@@ -668,6 +668,43 @@ This document is `rapp-rappid-spec/2.0`. **The `rappid` *string* form is frozen 
 
 Cartridges, eggs, and twins authored against any 1.x or 2.x version of these schemas remain hatchable. v1.0 UUID identities re-anchor losslessly on first hatch (§2); the prior id is preserved in `_migrated_from` and chains stay walkable.
 
+### 14.1 The Compatibility & Migration Contract (NORMATIVE)
+
+This is the law that lets the ecosystem evolve without rotting. The old mess came from
+**versioned identity strings** (`rappid:v2:…`, `rappid:v3:…`) — producers kept inventing formats
+and consumers couldn't read them all. The contract makes that impossible by separating who reads
+from who writes. Every RAPP component — the brainstem, hatchers, `rapp-god`, lineage walkers,
+egg packers, the `.html` baker — MUST obey it.
+
+1. **Liberal in, strict out (Postel's Law).**
+   - **Consumers** (anything that PARSES a rappid: validators, drift detectors, hatchers,
+     lineage-walkers, registries) **MUST accept every form**: legacy UUIDv4, `rappid:v2:<…>@host`,
+     bare `rappid:<hex>`, and canonical `rappid:<birth-slug>:<64hex>`.
+   - **Producers** (anything that EMITS a rappid: mint, egg-pack, file-rename, `.html` bake,
+     sidecars, index) **MUST emit ONLY the canonical form** `rappid:<birth-slug>:<64hex>`.
+   - New string forms therefore cannot proliferate — nothing is permitted to write a non-canonical
+     rappid. Drift detectors MUST NOT flag a legacy form as invalid; legacy is *expected*, not drift.
+
+2. **The bare hash is the universal join key.** Equality, dedup, and lineage-walk operate on the
+   `<hex>` digest — **never the string shape**. A legacy UUID twin and its canonicalized form are
+   provably the same entity because they share the same hash. This single rule eliminates
+   "two strings, one twin."
+
+3. **Never rewrite identity in place.** Canonicalizing a legacy artifact changes only the *string*
+   and records `_migrated_from` + `hash_bits` (`128` grandfathered / `256` native). The underlying
+   bits never change — so "minted once, never regenerated" (§2) holds and lineage chains stay walkable.
+
+4. **One migration moment, recorded.** An artifact canonicalizes the first time a tool touches it,
+   leaves the `_migrated_from` trail, and never churns again. Re-running a tool is idempotent.
+
+5. **Legacy acceptance is PERMANENT — never sunsetted.** There is no cutoff date after which old
+   forms are rejected. A twin minted in 2026 MUST still hatch in 2050. An "accept-then-reject"
+   window would re-break old twins, which defeats the purpose of permanent identity. Consumers read
+   legacy forms forever.
+
+> In one line: **producers converge on one canonical form; consumers tolerate every form, forever;
+> the hash is identity.** That is how the ecosystem grows without becoming a mess.
+
 ---
 
 ## 15. Compliance checklist
