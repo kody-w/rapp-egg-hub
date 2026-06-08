@@ -76,6 +76,21 @@ KINDS = ("personal", "pre-founder", "memorial", "project", "place", "custom")
 
 WILDHAVEN_RAPPID = "37ad22f5-ed6d-48b1-b8b4-61019f58a42b"
 WILDHAVEN_REPO = "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
+# Self-describing form of the (location-less) wildhaven parent UUID, per the
+# Eternity standard (Art. XXXIV.1): bare UUID → rappid:parent:<32hex>. Recorded
+# so a freshly-summoned twin's parent_rappid is never a raw UUID.
+WILDHAVEN_PARENT_RAPPID = "rappid:parent:" + WILDHAVEN_RAPPID.replace("-", "")
+
+
+def _rappid_from_uuid(slug, uuid_str):
+    """Mint a self-describing rappid from a fresh UUID, per the consolidated
+    Eternity form (Art. XXXIV.1 / SPEC §2). The 128 bits of UUID entropy are
+    preserved verbatim (dashes stripped → 32-hex); the slug makes the string
+    self-describing. The `@<owner>/<slug>` location envelope is added later, at
+    pack/publish time (scripts/canonicalize_egg.py), once the door repo exists.
+    Identity is never re-minted — only re-shaped — so the hash never changes.
+    """
+    return "rappid:%s:%s" % (slug, uuid_str.replace("-", ""))
 
 PORT_LOW, PORT_HIGH = 7081, 7200
 
@@ -1047,22 +1062,28 @@ class TwinAgent(BasicAgent):
         if kind not in KINDS:
             return f"Error: unknown kind '{kind}'. Valid: {', '.join(KINDS)}"
 
-        rappid = str(uuid.uuid4())
+        minted_uuid = str(uuid.uuid4())
+        # Emit the consolidated Eternity rappid (Art. XXXIV.1): self-describing
+        # rappid:<slug>:<32hex>, the same bits as the UUID, never a raw UUID.
+        rappid = _rappid_from_uuid(twin_name, minted_uuid)
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        workspace = pathlib.Path(_twins_dir()) / rappid
+        # Workspace dir is the filesystem-safe form of the rappid (the same
+        # transform _boot/_unpack_egg apply, so boot resolves it back).
+        ws_name = rappid.replace(":", "_").replace("@", "")
+        workspace = pathlib.Path(_twins_dir()) / ws_name
         try:
             workspace.mkdir(parents=True, exist_ok=False)
         except FileExistsError:
-            return f"Error: workspace exists at {workspace} (UUID4 collision — retry)"
+            return f"Error: workspace exists at {workspace} (rappid collision — retry)"
         except OSError as e:
             return f"Error: cannot create workspace: {e}"
 
         try:
             (workspace / "soul.md").write_text(SOUL_TEMPLATES[kind](twin_name, description))
             (workspace / "rappid.json").write_text(json.dumps({
-                "schema": "rapp-rappid/1.1",
+                "schema": "rapp-rappid/2.0",
                 "rappid": rappid,
-                "parent_rappid": WILDHAVEN_RAPPID,
+                "parent_rappid": WILDHAVEN_PARENT_RAPPID,
                 "parent_repo": WILDHAVEN_REPO,
                 "parent_commit": None,
                 "born_at": now,
@@ -1070,6 +1091,9 @@ class TwinAgent(BasicAgent):
                 "role": "variant",
                 "kind": kind,
                 "description": description or "",
+                "hash_bits": 128,
+                "_note_hash": "Grandfathered legacy 128-bit identity (pre-2.0). New twins mint 256-bit.",
+                "_migrated_from": minted_uuid,
                 "_summoned_by": "@kody-w/twin_agent",
             }, indent=2) + "\n")
             (workspace / "agents").mkdir()

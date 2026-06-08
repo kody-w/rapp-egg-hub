@@ -2,7 +2,7 @@
   "schema": "rapp-egg-hub-entry/1.0",
   "slug": "rappterbook-cohesive",
   "rappid_uuid": "cca817b507093e83698f7eb91195da1d",
-  "rappid": "rappid:v2:neighborhood:@kody-w/rappterbook-cohesive-twin-set:cca817b507093e83698f7eb91195da1d@local",
+  "rappid": "rappid:@kody-w/rappterbook-cohesive-twin-set:cca817b507093e83698f7eb91195da1d",
   "name": "rappterbook-cohesive",
   "display_name": "Rappterbook Cohesive Twin Set (Network Egg)",
   "kind": "neighborhood",
@@ -28,7 +28,7 @@
   "egg_path": "eggs/rappterbook-cohesive.egg",
   "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/rappterbook-cohesive.egg",
   "lineage": {
-    "parent_rappid": "rappid:v2:prototype:@rapp/origin:0b635450c04249fbb4b1bdb571044dec@github.com/kody-w/RAPP",
+    "parent_rappid": "rappid:@rapp/origin:0b635450c04249fbb4b1bdb571044dec",
     "parent_repo": "https://github.com/kody-w/RAPP",
     "host_project_repo": "https://github.com/kody-w/rappterbook"
   },
