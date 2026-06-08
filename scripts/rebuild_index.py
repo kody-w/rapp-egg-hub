@@ -52,7 +52,9 @@ def derive_entry(egg_path: pathlib.Path) -> dict:
         except json.JSONDecodeError:
             print(f"[rebuild] WARN: malformed sidecar {sidecar_path}", file=sys.stderr)
 
-    # rappid:<slug>:<hex> is canonical (rapp-rappid-spec/2.0). Pull it from the egg manifest
+    # The consolidated Eternity rappid (Art. XXXIV.1) is rappid:@<owner>/<slug>:<hex>;
+    # the location-less self-describing form rappid:<slug>:<hex> is also accepted. In
+    # both the hash is the final colon-delimited segment. Pull it from the egg manifest
     # source.rappid; tolerate a legacy rappid_uuid sidecar during migration.
     rappid = (src.get("rappid") or sidecar.get("rappid")
               or sidecar.get("rappid_uuid") or inner.get("rappid"))
