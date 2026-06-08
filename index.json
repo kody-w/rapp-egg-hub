@@ -5,9 +5,41 @@
   "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-06-08T01:36:07Z",
-  "egg_count": 4,
+  "updated_at": "2026-06-08T16:15:12Z",
+  "egg_count": 5,
   "eggs": [
+    {
+      "schema": "rapp-egg-hub-entry/2.0",
+      "slug": "generic-twin",
+      "rappid": "rappid:@kody-w/generic-twin:9b1c7f4a2d6e8053c14b9f70a8e2d135",
+      "hash_bits": 128,
+      "name": "generic-twin",
+      "display_name": "Generic Twin",
+      "kind": "personal",
+      "haiku": "",
+      "description": "Generic, PII-stripped digital twin of Generic Twin (full flavor). Persona, voice, and custom agents only \u2014 no memory, projects, customers, or secrets travel. Packed by @kody-w/twin_me; hatch on any local brainstem.",
+      "tags": [
+        "twin",
+        "generic",
+        "pii-stripped",
+        "persona",
+        "portable",
+        "full"
+      ],
+      "egg_schema": "brainstem-egg/2.1",
+      "size_bytes": 7082,
+      "sha256": "fad59f5fc88c72a9dd8005da3c312247723a3e595f683dfb03728518dfdcfaf0",
+      "packed_by": "@kody-w",
+      "packed_at": "2026-06-08T16:13:23Z",
+      "twin_html": "twins/generic-twin.html",
+      "twin_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/twins/generic-twin.html",
+      "egg_path": "eggs/generic-twin.egg",
+      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/generic-twin.egg",
+      "lineage": {
+        "parent_rappid": "rappid:@rapp/origin:0b635450c04249fbb4b1bdb571044dec",
+        "parent_repo": null
+      }
+    },
     {
       "schema": "rapp-egg-hub-entry/2.0",
       "slug": "grandma-rose",
