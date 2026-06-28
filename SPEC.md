@@ -1,5 +1,8 @@
 # Digital Twin Specification
 
+
+> **Identity defers to `rapp-eternity/1.0`.** The canonical rappid is a PKI-free SHA-256 **content-address**; a valid rappid requires NO key. The lineage derivation below (`sha256(parent ‖ lineage_key ‖ name_slot)`) is an **OPTIONAL** deterministic bloodline scheme — the `lineage_key` is a private germline SEED, never a mandatory ownership key, and is never required to mint or own a rappid. See `kody-w/rapp-eternity/SPEC.md` (the sole identity standard).
+
 > **Schema: `rapp-rappid-spec/2.0`** &nbsp;·&nbsp; First published: 2026-05-04 &nbsp;·&nbsp; v2.0 locked: 2026-06-01
 >
 > The contract for what it means to be a "digital twin" in this ecosystem — how it is identified, how it speaks, how it remembers, how it travels, how it inherits, how it survives. Twins authored against this spec hatch on every rapp-installer'd brainstem today and forever.
