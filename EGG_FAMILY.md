@@ -4,7 +4,7 @@
 >
 > Home: [`kody-w/rapp-egg-hub/EGG_FAMILY.md`](https://github.com/kody-w/rapp-egg-hub/blob/main/EGG_FAMILY.md)
 >
-> This document is the canonical, self-contained specification for the **`.egg` cartridge format family** and the **multi-scale `hatch` contract**. It **supersedes and replaces** §7 ("The egg cartridge format") of the Digital Twin Specification ([`rapp-egg-hub/SPEC.md`, `rapp-rappid-spec/2.0`](./SPEC.md)). `SPEC.md` §7 now bumps its egg-schema reference from `brainstem-egg/2.1` to `brainstem-egg/2.3` and points here for the full family. `SPEC.md` remains authoritative for what a *twin organism* is (identity, soul, memory, lineage, impersonation, PII gate); this document is authoritative for how *any* RAPP thing is **packed, transported, and hatched** as a single file.
+> This document is the canonical, self-contained specification for the **`.egg` cartridge format family** and the **multi-scale `hatch` contract**. It **supersedes and replaces** §7 ("The egg cartridge format") of the Digital Twin Specification ([`rapp-egg-hub/SPEC.md`, `rapp-rappid-spec/2.0`](./SPEC.md)). `SPEC.md` §7 **should** bump its egg-schema reference from `brainstem-egg/2.1` to `brainstem-egg/2.3` and point here for the full family — this document **proposes** that bump; `SPEC.md` has **not yet** been amended. `SPEC.md` remains authoritative for what a *twin organism* is (identity, soul, memory, lineage, impersonation, PII gate); this document is authoritative for how *any* RAPP thing is **packed, transported, and hatched** as a single file.
 
 ---
 
@@ -49,8 +49,8 @@ Every egg in the family **MUST** contain `manifest.json` at the zip root with **
   "exported_by": "@<github-handle>/<tool>",
 
   "source": {
-    "rappid":        "rappid:<slug>:<64hex>",
-    "parent_rappid": "rappid:<parent-slug>:<64hex>",
+    "rappid":        "rappid:@owner/slug:<64hex>",
+    "parent_rappid": "rappid:@owner/parent-slug:<64hex>",
     "repo":          "https://github.com/<owner>/<repo>.git | null",
     "commit":        "<git SHA at pack time | null>",
     "name":          "<slug>"
@@ -200,13 +200,13 @@ An egg carries identity; it does not own it. The organism's `rappid` (minted onc
 ### 4.1 Canonical form
 
 ```
-rappid:<slug>:<64hex>
+rappid:@owner/slug:<64hex>
 ```
 
 - The **`<64hex>` SHA-256 digest is the identity** — the universal join key for equality, dedup, and lineage-walk. Never truncated, never the slug.
 - **PKI-free.** Identity is a content-address (a hash), not a signature. Possession of the egg is *not* a claim of ownership; ownership is a **separate, OPTIONAL** layer.
 - **Keypair binding is RESERVED and OPTIONAL.** The manifest's `pubkey`/`sig_suite`/`birth_attestation` may stay empty forever and the egg is still fully conformant. No hatcher, packer, registry, or hub gate may **require** a keypair to accept or hatch an egg. (This is the resolved eternity ground truth — sha256 identity is mandatory and PKI-free; keypair sovereignty is opt-in, never required.)
-- The estate's eternity standard (`rapp-moment/1.0` / `rapp-eternity/1.0`) writes the owner-qualified form `rappid:@owner/slug:<64hex>`. Both `rappid:<slug>:<64hex>` and `rappid:@owner/slug:<64hex>` are valid producer outputs; **the hash is the join key either way.** A hatcher accepts both and never rewrites one into the other in transit.
+- The estate's eternity standard (`rapp-moment/1.0` / `rapp-eternity/1.0`) defines the owner-qualified form `rappid:@owner/slug:<64hex>` as the **sole canonical identity**, and a packer **emits only** that form. The legacy owner-less form `rappid:<slug>:<64hex>` is **read-accepted but never emitted** — a hatcher accepts both (Postel, §7) and **the hash is the join key either way**, never rewriting one into the other in transit.
 
 ### 4.2 The 128-bit → 64hex migration debt (LIVE)
 
@@ -258,7 +258,7 @@ The three layers compose without conflicting: sha256 secures the bytes; gh-colla
 
 Eggs obey the estate-wide compatibility law (`SPEC.md` §14.1), applied to the cartridge envelope:
 
-1. **Liberal in, strict out (Postel).** A **hatcher (consumer)** MUST read **every** egg shape ever shipped: `brainstem-egg/2.0`/`2.1`/`2.2-*`/`2.3-*` *and* the manifest-less `neighborhood-egg/1.0`, with 128-bit *or* 256-bit identities, with `@owner/slug` *or* bare-slug rappids. A **packer (producer)** MUST emit **only** the current canonical shape: a `brainstem-egg/2.3-<variant>` manifest with a canonical 64-hex rappid (for newly minted organisms) and the variant's fixed payload-tree.
+1. **Liberal in, strict out (Postel).** A **hatcher (consumer)** MUST read **every** egg shape ever shipped: `brainstem-egg/2.0`/`2.1`/`2.2-*`/`2.3-*` *and* the manifest-less `neighborhood-egg/1.0`, with 128-bit *or* 256-bit identities, with `@owner/slug` *or* bare-slug rappids. A **packer (producer)** MUST emit **only** the current canonical shape: a `brainstem-egg/2.3-<variant>` manifest with a canonical owner-qualified 64-hex rappid (`rappid:@owner/slug:<64hex>`, for newly minted organisms) and the variant's fixed payload-tree.
 2. **The hash is the join key.** Two eggs of the same organism — one 128-bit legacy, one canonicalized — are provably one entity because they share the `<hex>` digest. Never the string shape.
 3. **Never rewrite identity in place.** Canonicalizing an egg changes only the *string* and records `_migrated_from` + `hash_bits`; bits never change.
 4. **One migration moment, recorded; idempotent thereafter.**
@@ -296,7 +296,7 @@ cubby  ──┤ (smallest scale: one moment / one owner)
 
 An implementation is **`brainstem-egg/2.3`-conformant** when it (a) reads every variant in §3 including the `neighborhood-egg/1.0` legacy exception, (b) dispatches `hatch` on `schema` per §5, (c) verifies integrity-then-viability and refuses on either failure, (d) re-anchors legacy strings once without changing the hash, and (e) never reparents on transport.
 
-A **packer** is conformant when it emits only canonical `2.3-<variant>` manifests with a root `manifest.json` (§2), a canonical 64-hex rappid for newly minted organisms (§4), and the variant's exact payload-tree root (§3), with the PII gate passing (`SPEC.md` §12).
+A **packer** is conformant when it emits only canonical `2.3-<variant>` manifests with a root `manifest.json` (§2), a canonical owner-qualified 64-hex rappid for newly minted organisms (§4), and the variant's exact payload-tree root (§3), with the PII gate passing (`SPEC.md` §12).
 
 ### 9.1 Hatchability test vectors (one per variant)
 
@@ -313,7 +313,7 @@ A **packer** is conformant when it emits only canonical `2.3-<variant>` manifest
 ### 9.2 Identity test vectors
 
 - **Legacy 128-bit (live hub):** `rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e` → hatch accepts, canonicalizes string only, stamps `hash_bits:128` + `_migrated_from`, **never** pads to 64 hex.
-- **Native 256-bit (new):** `rappid:wildhaven-ai-homes:37ad22f5…<64hex>` → hatch accepts as-is, `hash_bits:256`.
+- **Native 256-bit (new):** `rappid:@kody-w/wildhaven-ai-homes:37ad22f5…<64hex>` → hatch accepts as-is, `hash_bits:256`.
 - **Eternity owner-qualified:** `rappid:@kody-w/generic-twin:<64hex>` → hatch accepts; join on `<64hex>`, do not rewrite to bare-slug.
 - **Forbidden:** any `rappid:v4:…` (versioned string) → packer MUST NOT emit; hatcher reads it but canonicalizes (strips the version decoration) on touch.
 
@@ -346,7 +346,7 @@ grandma-rose-session-2026-06-28.egg
   "exported_by": "@kody-w/twin_agent",
   "source": {
     "rappid": "rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e",
-    "parent_rappid": "rappid:wildhaven-ai-homes:37ad22f5...<64hex>",
+    "parent_rappid": "rappid:@kody-w/wildhaven-ai-homes:37ad22f5...<64hex>",
     "repo": "https://github.com/kody-w/rapp-egg-hub.git",
     "commit": "a1b2c3d",
     "name": "grandma-rose"
@@ -360,7 +360,7 @@ grandma-rose-session-2026-06-28.egg
 }
 ```
 
-Note: `source.rappid` is **32-hex (128-bit)** — packed faithfully, **not padded** to 64. `bundled_repo:false` because a session ships no kernel; it resumes on the receiver's existing twin.
+Note: `source.rappid` is **32-hex (128-bit)** — packed faithfully (a grandfathered organism, read-accepted under §7), **not padded** to 64. `bundled_repo:false` because a session ships no kernel; it resumes on the receiver's existing twin.
 
 **2 — Sneakernet.** The packer also bakes the egg into a single-file `.html` (`SPEC.md` §11) with a JS-free `data:` download anchor, and the family member sends it over Teams. The recipient downloads the `.egg` with JavaScript disabled — it just works.
 
