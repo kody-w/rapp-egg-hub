@@ -9,7 +9,7 @@
 
 This is the **organism spec**. The companion document is the [rappterbox console spec](https://github.com/kody-w/rappterbox/blob/main/SPEC.md), which defines the runtime that hosts twins. Twins live; consoles are substrate.
 
-> **v2.0 is the identity upgrade.** The `rappid` is no longer a UUIDv4 — it is a self-verifying `rappid:<birth-slug>:<64hex>` string derived by SHA-256 from a private germline key. Sections §3–§6 and §9–§10 are unchanged in substance (only `rappid_uuid` references were renamed). §2 (identity), §7 (egg), §8 (hub) were rewritten. §11 (the single-file `.html` twin) and §12 (No PII / secrets) are new. Legacy UUID twins migrate losslessly — see §2.
+> **v2.0 is the identity upgrade.** The `rappid` is no longer a UUIDv4 — it is the self-locating, self-verifying **Eternity** content-address `rappid:@<owner>/<slug>:<64hex>` (SHA-256 of `<owner>/<slug>`; kind lives in the record, not the string; CONSTITUTION Art. XXXIV.1, locked 2026-06-03). The earlier bare `rappid:<birth-slug>:<64hex>` shape is now **Legacy** — read-forever, canonicalized on read, never emitted. Sections §3–§6 and §9–§10 are unchanged in substance (only `rappid_uuid` references were renamed). §2 (identity), §7 (egg), §8 (hub) were rewritten. §11 (the single-file `.html` twin) and §12 (No PII / secrets) are new. Legacy UUID twins migrate losslessly — see §2.
 
 ---
 
@@ -17,7 +17,7 @@ This is the **organism spec**. The companion document is the [rappterbox console
 
 A digital twin is a **portable digital organism** with:
 
-- **Identity** — a permanent, self-verifying `rappid` of the form `rappid:<birth-slug>:<64hex>`, minted at first hatch, never regenerated
+- **Identity** — a permanent, self-verifying **Eternity** `rappid` of the form `rappid:@<owner>/<slug>:<64hex>`, minted at first hatch, never regenerated
 - **Voice** — a `soul.md` system prompt that defines how the twin speaks
 - **Memory** — persistent state under `.brainstem_data/`, accumulating across sessions
 - **Lineage** — a `parent_rappid` chain walking back to the species root
@@ -39,7 +39,7 @@ The twin runs on a brainstem (the runtime). The brainstem is mortal — it's the
 ## 2. The rappid (identity)
 
 ```json
-"rappid": "rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e6f1a9c3b8d2e5470a1b9c8d7e6f504132"
+"rappid": "rappid:@kody-w/grandma-rose:bda123af507211a7eb367078e867825241580661384b3cc9abeab4e776e2daff"
 ```
 
 The rappid is a **self-verifying, hash-derived identity string**. It supersedes the v1.0 UUIDv4 entirely.
@@ -47,24 +47,29 @@ The rappid is a **self-verifying, hash-derived identity string**. It supersedes 
 ### Canonical form
 
 ```
-rappid:<birth-slug>:<64hex>
+rappid:@<owner>/<slug>:<64hex>
 ```
 
-- **`<birth-slug>`** — the **immutable human-readable birth name**: the exact `name_slot` that derived the hash. It is the *gene name*. Because the slug is the literal input to the derivation, the string is **self-verifying with no lookup** — anyone holding the lineage key can recompute the hash from the slug and confirm the identity. The slug never changes after birth, even if the twin's `display_name` later changes.
-- **`<64hex>`** — the **full SHA-256 digest**, 256-bit, **NEVER truncated**. This is the authoritative value for matching, dedup, and equality. It carries 2^128 birthday resistance even in a post-Grover world. The slug is the name; the hash is the identity.
+This is the **Eternity** form — the single string producers emit (CONSTITUTION Art. XXXIV.1, locked 2026-06-03). It is BOTH identity and self-locating:
 
-The hash is authoritative. The slug is descriptive. When the two ever disagree (e.g. a hand-edited file), the hash wins and the record is malformed.
+- **`@<owner>/<slug>`** — the **canonical location**. `github.com/<owner>/<slug>` is the door; every door URL derives from it by string parsing (no lookup, no API). The slug never changes after birth, even if the twin's `display_name` later changes.
+- **`<64hex>`** — the **full SHA-256 digest of `<owner>/<slug>`**, 256-bit, **NEVER truncated**. A PKI-free **content-address**: anyone can recompute `sha256("<owner>/<slug>")` and confirm the identity — **no key required**. It is the authoritative value for matching, dedup, and equality, and carries 2^128 birthday resistance even in a post-Grover world.
+- **`kind`** and all other structure live in the **`rappid.json` RECORD**, not the string.
 
-### Derivation
+The hash is authoritative; `@<owner>/<slug>` locates. When the two ever disagree (e.g. a hand-edited file), the hash wins and the record is malformed.
 
-The rappid hash is derived deterministically from the parent, the private lineage key, and the birth name, with `0x00` byte separators:
+> **Legacy forms (read-forever, never emitted).** The earlier bare `rappid:<birth-slug>:<64hex>` shape (no `@<owner>/`) is a **Legacy** form: it is READ forever and **canonicalized** on read to the Eternity form above (`tools/door_address.py::canonicalize_rappid` — the hash is preserved, `@<owner>/` supplied from the repo it lives in) — but is **NEVER emitted** by a producer. Likewise the older `rappid:v2:<kind>:@<owner>/<repo>:<32hex>@github.com/<owner>/<repo>` and bare-UUID forms. See *Legacy migration* below and §14.1.
+
+### Derivation (optional bloodline scheme)
+
+The **canonical identity** hash is the content-address `sha256("<owner>/<slug>")` (see *Canonical form*) — **no key, no lineage input**. Independently, a lineage MAY keep an **OPTIONAL** deterministic *bloodline* hash for private germline bookkeeping, derived from the parent, a private lineage key, and the birth name with `0x00` byte separators:
 
 ```
 child_hash   = sha256( parent_rappid  ‖ 0x00 ‖ lineage_key ‖ 0x00 ‖ name_slot )
 genesis_hash = sha256( "rapp-genesis" ‖ 0x00 ‖ lineage_key )
 ```
 
-Both produce the full 64 hex characters. `parent_rappid` is the full canonical parent string (`rappid:<slug>:<64hex>`). `name_slot` is the new twin's birth-slug. The genesis form anchors a brand-new lineage that has no parent.
+Both produce the full 64 hex characters. This bloodline scheme is a **private convenience, never a requirement** — a valid rappid needs no lineage key (per `rapp-eternity/1.0`, the sole identity standard). `parent_rappid` is the full canonical parent rappid; `name_slot` is the twin's birth-slug; the genesis form anchors a brand-new lineage that has no parent.
 
 ### The lineage key (private germline)
 
@@ -72,7 +77,7 @@ Both produce the full 64 hex characters. `parent_rappid` is the full canonical p
 ~/.brainstem/.lineage_key      (mode 0600)
 ```
 
-The `lineage_key` is the **private germline — the secret**. Possession of the key *is* the ability to mint new identities in the lineage. A leaked key forges the entire lineage.
+The `lineage_key` is an **OPTIONAL private germline seed** — a bloodline convenience, **never a required ownership key**. A valid rappid is a keyless content-address (per `rapp-eternity/1.0`): no key is needed to mint or own one. Where a lineage *does* keep a key it is a secret — treat a leak as a compromised bloodline seed, not a stolen identity.
 
 - The lineage key **MUST NEVER appear in any egg, any sidecar, any `.html`, or anywhere in the public repo.** It is on the egg-packer exclusion list (§7) and the PII/secrets gate (§12).
 - The key never travels. Eggs carry the *derived* rappid, never the seed that derived it.
@@ -86,7 +91,7 @@ v1.0 had no ownership proof beyond possession of the file. v2.0 reserves the pat
 - Keys can **rotate or be inherited** via **signed succession** — the outgoing key signs an entry endorsing the incoming key. This lets a lineage outlive any single operator or device.
 - These fields are **RESERVED** as of v2.0 and **MAY be empty** today. They fill in progressively as the ecosystem adopts signing. An empty `pubkey` / `sig_suite: "none"` is fully spec-compliant.
 
-> The lineage key proves you can *mint* in the line. The keypair proves you *own* a given twin and can hand it down. They are different mechanisms with different lifetimes — do not conflate them.
+> The lineage key is an OPTIONAL bloodline seed for private germline bookkeeping — never required to mint or own (a rappid is a keyless content-address, `rapp-eternity/1.0`). The keypair (also optional, reserved below) proves you *own* a given twin and can hand it down. They are different mechanisms with different lifetimes — do not conflate them, and neither is mandatory.
 
 ### The versionless record
 
@@ -140,7 +145,7 @@ The **`sig_suite` tag is migratable** without ever touching the identity. A twin
 ### Properties
 
 - **Permanent** — the `rappid` is minted exactly once at first hatch and never regenerated. It survives substrate hops, kernel updates, ownership transfers, and decades of egg roundtrips.
-- **Self-verifying** — slug + lineage key recompute the hash. No central registry required for verification.
+- **Self-verifying** — anyone recomputes `sha256("<owner>/<slug>")` from the location. No key and no central registry required for verification.
 - **Authoritative by hash** — matching, dedup, and equality use the full 64-hex digest, never the slug, never a prefix.
 - **Lineage anchor** — `parent_rappid` is the full canonical rappid of the code ancestor.
 
@@ -160,11 +165,11 @@ v1.0 twins do not break. Migration is documented, deterministic, and **never los
 
 **Identity is never re-minted on migration** — re-minting would change the bits and break "never regenerated." Migration only *re-shapes the string* around the **same underlying hash**, and records the original in `_migrated_from`. Legacy 128-bit twins are therefore **grandfathered at 128-bit** (a UUID carries only 128 bits of entropy — fabricating 256 would invent a new identity, which is forbidden). New twins mint at full 256-bit. The record's `hash_bits` field states which: `128` (grandfathered) or `256` (native).
 
-| Legacy form | Migration (identity-preserving) |
+| Legacy form | Migration (identity-preserving → Eternity form) |
 |---|---|
-| **UUIDv4** (`1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f`) | **Strip dashes → 32-hex (128-bit), prefix the record slug** → `rappid:<name>:1b5e7aa92c46…`. Same bits, now self-describing. `hash_bits: 128`, `_note_hash` flags it grandfathered. Old UUID kept in `_migrated_from`. |
-| **`rappid:v2:<slug>:<HEX>@gh`** (versioned-string mistake) | **Extract the hash.** The hash becomes the authoritative `<hex>`; the slug becomes `<birth-slug>`. The `@gh` / `v2` decorations are dropped — they were record concerns, not string concerns. Old string kept in `_migrated_from`. |
-| **bare `rappid:<hex>`** (slugless) | **Prepend the record slug.** The `name` from the record becomes `<birth-slug>`, producing `rappid:<name>:<hex>`. Old string kept in `_migrated_from`. |
+| **UUIDv4** (`1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f`) | **Strip dashes → 32-hex (128-bit)**, then wrap in the Eternity envelope from the located repo → `rappid:@<owner>/<slug>:1b5e7aa92c46…`. Same bits, now self-locating. `hash_bits: 128`, `_note_hash` flags it grandfathered. Old UUID kept in `_migrated_from`. |
+| **`rappid:v2:<kind>:@<owner>/<repo>:<HEX>@github.com/<owner>/<repo>`** (versioned-string mistake) | **Drop the `v2:` / `<kind>` / `@host` decorations, keep the hash** → `rappid:@<owner>/<slug>:<HEX>`. The `kind` moves into the record. Old string kept in `_migrated_from`. |
+| **bare `rappid:<birth-slug>:<hex>`** (location-less) | **Prepend the Eternity envelope** from the repo it lives in → `rappid:@<owner>/<slug>:<hex>` (hash preserved). Old string kept in `_migrated_from`. |
 
 ```json
 "_migrated_from": "1b5e7aa9-2c46-4cd8-9f1f-0e3b62fc5e8f",
@@ -399,6 +404,10 @@ Twins MAY ship additional cartridges in `agents/` for twin-specific capabilities
 | `brainstem-egg/2.1` | variant repos (rappid.json + brainstem.py at same root) — current default for twins |
 | `brainstem-egg/2.2-organism` | brainstem-instance organisms (rappid.json above `src/rapp_brainstem/`) |
 | `brainstem-egg/2.2-rapplication` | rapplications with state cartridge (rapp-zoo) |
+| `brainstem-egg/2.3-session` | tethered browser session cartridge (vbrainstem) |
+| `brainstem-egg/2.3-neighborhood` | neighborhood federation cartridge |
+| `brainstem-egg/2.3-estate` | estate (door catalog) cartridge |
+| `brainstem-egg/2.3-cubby` | private-cubby cartridge |
 
 Twin authoring should target `2.1` unless there's a specific reason to use a different shape.
 
@@ -407,7 +416,7 @@ Twin authoring should target `2.1` unless there's a specific reason to use a dif
 A twin egg is **viable** when:
 
 - ✓ Manifest parses, schema is `brainstem-egg/2.x`
-- ✓ `repo/rappid.json` exists with a valid canonical `rappid` (`rappid:<birth-slug>:<64hex>`, 64 lowercase hex, slug matches `lineage.name_slot`)
+- ✓ `repo/rappid.json` exists with a valid canonical Eternity `rappid` (`rappid:@<owner>/<slug>:<64hex>`, 64 lowercase hex, `<slug>` matches `name`)
 - ✓ `repo/soul.md` exists and is non-empty
 - ✓ `parent_rappid` lineage is valid and canonical (single-parent rule honored)
 - ✓ No `.lineage_key`, no auth secrets, no PII anywhere in the payload (§12)
@@ -498,7 +507,7 @@ The Twin agent (`@kody-w/twin_agent` in RAR, `agents/twin_agent.py` in this hub)
 
 | Action | Semantics |
 |---|---|
-| `summon` | Birth a fresh twin. Mints the canonical rappid (`child_hash`/`genesis_hash` from `~/.brainstem/.lineage_key`), writes workspace from a soul template (kind). |
+| `summon` | Birth a fresh twin. Mints the canonical **Eternity** rappid `rappid:@<owner>/<slug>:<64hex>` (`<64hex>` = `sha256("<owner>/<slug>")`; kind in the record, not the string), writes workspace from a soul template (kind). Never emits the bare legacy form. |
 | `hatch` | Import an existing twin from a `.egg` (local file via `egg_path` OR remote URL via `egg_url`) or from a `.html` twin. sha256-verifies if expected hash known. Re-anchors legacy UUID identities once (§2). |
 | `boot` | Start the twin as its own brainstem on a fresh port (auto-allocates 7081–7200). Returns the chat URL. |
 | `stop` | SIGTERM a running twin; clean up pid/port files. |
@@ -655,15 +664,16 @@ Until phase 2 fills in, `sig_suite: "none"` + sha256 is the baseline. It detects
 
 ## 14. Versioning and stability
 
-This document is `rapp-rappid-spec/2.0`. **The `rappid` *string* form is frozen forever** — `rappid:<birth-slug>:<64hex>`, no version tag, ever. **The `rappid.json` RECORD is versionless and additive** — new needs become new optional fields, never new string forms. Future spec versions are additive only; old readers ignore unknown fields.
+This document is `rapp-rappid-spec/2.0`. **The `rappid` *string* form is frozen forever** — the Eternity `rappid:@<owner>/<slug>:<64hex>`, no version tag, ever. **The `rappid.json` RECORD is versionless and additive** — new needs become new optional fields, never new string forms. Future spec versions are additive only; old readers ignore unknown fields.
 
 ### Schemas referenced
 
 | Schema | Purpose |
 |---|---|
+| `rapp-eternity/1.0` | the identity standard this document defers to (Eternity rappid form + invariants) |
 | `rapp-rappid-spec/2.0` | this document |
 | `rapp-rappid/2.0` | rappid.json record shape (hash-derived identity + reserved ownership fields) |
-| `brainstem-egg/2.1` | egg cartridge format (default for twins) |
+| `brainstem-egg/2.1`–`2.3` | egg cartridge format (2.1 twins · 2.2 organisms/rapplications · 2.3 sessions/neighborhoods/estates/cubbies) |
 | `rapp-egg-hub-entry/2.0` | sidecar JSON in this hub |
 | `rapp-egg-hub/2.0` | catalog (`index.json`) |
 | `rapp-agent/1.0` | the cartridge manifest format (Twin, Estate, etc.) |
@@ -682,9 +692,10 @@ egg packers, the `.html` baker — MUST obey it.
 1. **Liberal in, strict out (Postel's Law).**
    - **Consumers** (anything that PARSES a rappid: validators, drift detectors, hatchers,
      lineage-walkers, registries) **MUST accept every form**: legacy UUIDv4, `rappid:v2:<…>@host`,
-     bare `rappid:<hex>`, and canonical `rappid:<birth-slug>:<64hex>`.
+     bare `rappid:<hex>`, the location-less `rappid:<birth-slug>:<64hex>`, and the canonical Eternity
+     `rappid:@<owner>/<slug>:<64hex>`.
    - **Producers** (anything that EMITS a rappid: mint, egg-pack, file-rename, `.html` bake,
-     sidecars, index) **MUST emit ONLY the canonical form** `rappid:<birth-slug>:<64hex>`.
+     sidecars, index) **MUST emit ONLY the canonical Eternity form** `rappid:@<owner>/<slug>:<64hex>`.
    - New string forms therefore cannot proliferate — nothing is permitted to write a non-canonical
      rappid. Drift detectors MUST NOT flag a legacy form as invalid; legacy is *expected*, not drift.
 
@@ -715,8 +726,8 @@ egg packers, the `.html` baker — MUST obey it.
 A twin egg ships hub-compliant when ALL of the following are true:
 
 ### Identity
-- [ ] `rappid.json` has a valid canonical `rappid` (`rappid:<birth-slug>:<64hex>`, full untruncated 64 lowercase hex)
-- [ ] `<birth-slug>` equals `lineage.name_slot` (self-verifying)
+- [ ] `rappid.json` has a valid canonical Eternity `rappid` (`rappid:@<owner>/<slug>:<64hex>`, full untruncated 64 lowercase hex)
+- [ ] `<64hex>` equals `sha256("<owner>/<slug>")` and `<slug>` equals the record `name` (self-verifying content-address)
 - [ ] `parent_rappid` set as a full canonical rappid; chain walks back to the rapp species root
 - [ ] Single-parent rule honored — `parent_rappid` is the actual code-ancestor
 - [ ] NO version tag in the rappid string (no `rappid:v4:…`)
