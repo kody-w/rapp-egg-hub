@@ -44,7 +44,6 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-import uuid
 import zipfile
 
 from agents.basic_agent import BasicAgent
@@ -76,21 +75,54 @@ KINDS = ("personal", "pre-founder", "memorial", "project", "place", "custom")
 
 WILDHAVEN_RAPPID = "37ad22f5-ed6d-48b1-b8b4-61019f58a42b"
 WILDHAVEN_REPO = "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
-# Self-describing form of the (location-less) wildhaven parent UUID, per the
-# Eternity standard (Art. XXXIV.1): bare UUID → rappid:parent:<32hex>. Recorded
-# so a freshly-summoned twin's parent_rappid is never a raw UUID.
+# Location-less legacy form of the wildhaven parent UUID: bare UUID →
+# rappid:parent:<32hex>. A READ-FOREVER legacy shape (door_address.py
+# canonicalizes it to @<owner>/<slug> once the parent's door repo is known);
+# recorded so a freshly-summoned twin's parent_rappid is never a raw UUID.
 WILDHAVEN_PARENT_RAPPID = "rappid:parent:" + WILDHAVEN_RAPPID.replace("-", "")
 
 
 def _rappid_from_uuid(slug, uuid_str):
-    """Mint a self-describing rappid from a fresh UUID, per the consolidated
-    Eternity form (Art. XXXIV.1 / SPEC §2). The 128 bits of UUID entropy are
-    preserved verbatim (dashes stripped → 32-hex); the slug makes the string
-    self-describing. The `@<owner>/<slug>` location envelope is added later, at
-    pack/publish time (scripts/canonicalize_egg.py), once the door repo exists.
-    Identity is never re-minted — only re-shaped — so the hash never changes.
+    """LEGACY reshaper (migration only): 128-bit UUID → bare rappid:<slug>:<32hex>,
+    entropy preserved. This is a read-forever / canonicalized legacy form, NOT the
+    emitted mint — fresh twins mint the consolidated Eternity content-address via
+    `_eternity_rappid`. Kept for lossless migration of pre-Eternity UUID twins.
     """
     return "rappid:%s:%s" % (slug, uuid_str.replace("-", ""))
+
+
+def _operator_owner(kwargs=None):
+    """Resolve the operator's GitHub owner handle for the Eternity content-address.
+    Precedence: explicit `owner` kwarg → $RAPP_OWNER → $GITHUB_ACTOR → 'local'
+    (a 'local' mint is re-anchored to the real @<owner> at publish/door-plant).
+    Any leading '@' is normalized off.
+    """
+    o = ((kwargs or {}).get("owner") or "").strip()
+    o = o or os.environ.get("RAPP_OWNER", "") or os.environ.get("GITHUB_ACTOR", "")
+    return (o or "local").lstrip("@")
+
+
+def _eternity_rappid(owner, slug):
+    """Mint the consolidated Eternity rappid (CONSTITUTION Art. XXXIV.1, locked
+    2026-06-03): rappid:@<owner>/<slug>:<64hex> where <64hex> = sha256("<owner>/<slug>").
+    A PKI-free, self-locating content-address — `kind` lives in the rappid.json
+    RECORD, not the string. Deterministic: the same @<owner>/<slug> always yields
+    the same identity. This is the ONLY form producers emit; the bare
+    rappid:<slug>:<hex> shape is read-only legacy, never emitted.
+    """
+    loc = "%s/%s" % (owner, slug)
+    return "rappid:@%s/%s:%s" % (owner, slug, hashlib.sha256(loc.encode("utf-8")).hexdigest())
+
+
+def _ws_name(rappid):
+    """Filesystem-safe single-segment workspace dir name for a rappid. Flattens the
+    Eternity string rappid:@<owner>/<slug>:<hash> (and every legacy shape) — ':',
+    '@' and '/' are all neutralized so a slug's slash never creates nested dirs.
+    Backward-compatible: a bare rappid:<slug>:<hex> maps exactly as before.
+    """
+    if not rappid.startswith("rappid:"):
+        return rappid
+    return rappid.replace(":", "_").replace("@", "").replace("/", "_")
 
 PORT_LOW, PORT_HIGH = 7081, 7200
 
@@ -539,12 +571,9 @@ def _unpack_egg(blob, host_root):
         if not rappid_uuid:
             raise ValueError("egg manifest missing rappid_uuid")
 
-        # Egg-rappid format strings (rappid:twin:@pub/slug:entropy) → use the
-        # entropy + slug as the workspace name. UUID4 strings → use directly.
-        if rappid_uuid.startswith("rappid:"):
-            ws_name = rappid_uuid.replace(":", "_").replace("@", "")
-        else:
-            ws_name = rappid_uuid
+        # Egg-rappid format strings (rappid:@<owner>/<slug>:<hash>) → flatten to a
+        # single-segment workspace name. UUID4 strings → use directly.
+        ws_name = _ws_name(rappid_uuid)
 
         os.makedirs(host_root, exist_ok=True)
         workspace = os.path.join(host_root, ws_name)
@@ -989,6 +1018,10 @@ class TwinAgent(BasicAgent):
                         "type": "string",
                         "description": "One-line description woven into soul.md (summon).",
                     },
+                    "owner": {
+                        "type": "string",
+                        "description": "Operator's GitHub owner handle for the twin's Eternity rappid (@<owner>/<slug>). Defaults to $RAPP_OWNER / $GITHUB_ACTOR, else 'local' (re-anchored to the real owner at publish). Example: 'kody-w'.",
+                    },
                     "egg_path": {
                         "type": "string",
                         "description": "Absolute path to a local .egg file (hatch). One of egg_path or egg_url is required.",
@@ -1062,14 +1095,15 @@ class TwinAgent(BasicAgent):
         if kind not in KINDS:
             return f"Error: unknown kind '{kind}'. Valid: {', '.join(KINDS)}"
 
-        minted_uuid = str(uuid.uuid4())
-        # Emit the consolidated Eternity rappid (Art. XXXIV.1): self-describing
-        # rappid:<slug>:<32hex>, the same bits as the UUID, never a raw UUID.
-        rappid = _rappid_from_uuid(twin_name, minted_uuid)
+        owner = _operator_owner(kwargs)
+        # Emit the consolidated Eternity rappid (Art. XXXIV.1): the PKI-free,
+        # self-locating sha256("<owner>/<slug>") content-address. The bare
+        # rappid:<slug>:<hex> form is read-only legacy and is NEVER emitted here.
+        rappid = _eternity_rappid(owner, twin_name)
         now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         # Workspace dir is the filesystem-safe form of the rappid (the same
         # transform _boot/_unpack_egg apply, so boot resolves it back).
-        ws_name = rappid.replace(":", "_").replace("@", "")
+        ws_name = _ws_name(rappid)
         workspace = pathlib.Path(_twins_dir()) / ws_name
         try:
             workspace.mkdir(parents=True, exist_ok=False)
@@ -1088,12 +1122,12 @@ class TwinAgent(BasicAgent):
                 "parent_commit": None,
                 "born_at": now,
                 "name": twin_name,
+                "owner": "@" + owner,
                 "role": "variant",
                 "kind": kind,
                 "description": description or "",
-                "hash_bits": 128,
-                "_note_hash": "Grandfathered legacy 128-bit identity (pre-2.0). New twins mint 256-bit.",
-                "_migrated_from": minted_uuid,
+                "hash_bits": 256,
+                "_note_hash": "Native 256-bit Eternity content-address: sha256('<owner>/<slug>'). Kind lives in this record, not the string.",
                 "_summoned_by": "@kody-w/twin_agent",
             }, indent=2) + "\n")
             (workspace / "agents").mkdir()
@@ -1217,7 +1251,7 @@ class TwinAgent(BasicAgent):
         if not rappid:
             return "Error: rappid_uuid required for boot. Use action='list' first."
 
-        ws_name = rappid.replace(":", "_").replace("@", "") if rappid.startswith("rappid:") else rappid
+        ws_name = _ws_name(rappid)
         workspace = pathlib.Path(_twins_dir()) / ws_name
         if not workspace.is_dir():
             return f"Error: workspace not found at {workspace}. Did you summon or hatch first?"
@@ -1355,7 +1389,7 @@ class TwinAgent(BasicAgent):
             return ("Error: rappid_uuid required for update_identity. "
                     "Use action='list' first to find the rappid.")
 
-        ws_name = rappid.replace(":", "_").replace("@", "") if rappid.startswith("rappid:") else rappid
+        ws_name = _ws_name(rappid)
         workspace = pathlib.Path(_twins_dir()) / ws_name
         if not workspace.is_dir():
             return f"Error: workspace not found at {workspace}"
@@ -1425,7 +1459,7 @@ class TwinAgent(BasicAgent):
             return ("Error: rappid_uuid required for lay_egg. "
                     "Use action='list' first to find the rappid.")
 
-        ws_name = rappid.replace(":", "_").replace("@", "") if rappid.startswith("rappid:") else rappid
+        ws_name = _ws_name(rappid)
         workspace = pathlib.Path(_twins_dir()) / ws_name
         if not workspace.is_dir():
             return f"Error: workspace not found at {workspace}"
@@ -1511,7 +1545,7 @@ class TwinAgent(BasicAgent):
         if not new_soul.strip():
             return "Error: new_soul required for update_soul (the new soul.md content)."
 
-        ws_name = rappid.replace(":", "_").replace("@", "") if rappid.startswith("rappid:") else rappid
+        ws_name = _ws_name(rappid)
         workspace = pathlib.Path(_twins_dir()) / ws_name
         if not workspace.is_dir():
             return f"Error: workspace not found at {workspace}"
