@@ -60,16 +60,16 @@ The hash is authoritative; `@<owner>/<slug>` locates. When the two ever disagree
 
 > **Legacy forms (read-forever, never emitted).** The earlier bare `rappid:<birth-slug>:<64hex>` shape (no `@<owner>/`) is a **Legacy** form: it is READ forever and **canonicalized** on read to the Eternity form above (`tools/door_address.py::canonicalize_rappid` — the hash is preserved, `@<owner>/` supplied from the repo it lives in) — but is **NEVER emitted** by a producer. Likewise the older `rappid:v2:<kind>:@<owner>/<repo>:<32hex>@github.com/<owner>/<repo>` and bare-UUID forms. See *Legacy migration* below and §14.1.
 
-### Derivation
+### Derivation (optional bloodline scheme)
 
-The rappid hash is derived deterministically from the parent, the private lineage key, and the birth name, with `0x00` byte separators:
+The **canonical identity** hash is the content-address `sha256("<owner>/<slug>")` (see *Canonical form*) — **no key, no lineage input**. Independently, a lineage MAY keep an **OPTIONAL** deterministic *bloodline* hash for private germline bookkeeping, derived from the parent, a private lineage key, and the birth name with `0x00` byte separators:
 
 ```
 child_hash   = sha256( parent_rappid  ‖ 0x00 ‖ lineage_key ‖ 0x00 ‖ name_slot )
 genesis_hash = sha256( "rapp-genesis" ‖ 0x00 ‖ lineage_key )
 ```
 
-Both produce the full 64 hex characters. `parent_rappid` is the full canonical parent string (`rappid:<slug>:<64hex>`). `name_slot` is the new twin's birth-slug. The genesis form anchors a brand-new lineage that has no parent.
+Both produce the full 64 hex characters. This bloodline scheme is a **private convenience, never a requirement** — a valid rappid needs no lineage key (per `rapp-eternity/1.0`, the sole identity standard). `parent_rappid` is the full canonical parent rappid; `name_slot` is the twin's birth-slug; the genesis form anchors a brand-new lineage that has no parent.
 
 ### The lineage key (private germline)
 
@@ -77,7 +77,7 @@ Both produce the full 64 hex characters. `parent_rappid` is the full canonical p
 ~/.brainstem/.lineage_key      (mode 0600)
 ```
 
-The `lineage_key` is the **private germline — the secret**. Possession of the key *is* the ability to mint new identities in the lineage. A leaked key forges the entire lineage.
+The `lineage_key` is an **OPTIONAL private germline seed** — a bloodline convenience, **never a required ownership key**. A valid rappid is a keyless content-address (per `rapp-eternity/1.0`): no key is needed to mint or own one. Where a lineage *does* keep a key it is a secret — treat a leak as a compromised bloodline seed, not a stolen identity.
 
 - The lineage key **MUST NEVER appear in any egg, any sidecar, any `.html`, or anywhere in the public repo.** It is on the egg-packer exclusion list (§7) and the PII/secrets gate (§12).
 - The key never travels. Eggs carry the *derived* rappid, never the seed that derived it.
@@ -91,7 +91,7 @@ v1.0 had no ownership proof beyond possession of the file. v2.0 reserves the pat
 - Keys can **rotate or be inherited** via **signed succession** — the outgoing key signs an entry endorsing the incoming key. This lets a lineage outlive any single operator or device.
 - These fields are **RESERVED** as of v2.0 and **MAY be empty** today. They fill in progressively as the ecosystem adopts signing. An empty `pubkey` / `sig_suite: "none"` is fully spec-compliant.
 
-> The lineage key proves you can *mint* in the line. The keypair proves you *own* a given twin and can hand it down. They are different mechanisms with different lifetimes — do not conflate them.
+> The lineage key is an OPTIONAL bloodline seed for private germline bookkeeping — never required to mint or own (a rappid is a keyless content-address, `rapp-eternity/1.0`). The keypair (also optional, reserved below) proves you *own* a given twin and can hand it down. They are different mechanisms with different lifetimes — do not conflate them, and neither is mandatory.
 
 ### The versionless record
 
@@ -145,7 +145,7 @@ The **`sig_suite` tag is migratable** without ever touching the identity. A twin
 ### Properties
 
 - **Permanent** — the `rappid` is minted exactly once at first hatch and never regenerated. It survives substrate hops, kernel updates, ownership transfers, and decades of egg roundtrips.
-- **Self-verifying** — slug + lineage key recompute the hash. No central registry required for verification.
+- **Self-verifying** — anyone recomputes `sha256("<owner>/<slug>")` from the location. No key and no central registry required for verification.
 - **Authoritative by hash** — matching, dedup, and equality use the full 64-hex digest, never the slug, never a prefix.
 - **Lineage anchor** — `parent_rappid` is the full canonical rappid of the code ancestor.
 
