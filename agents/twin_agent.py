@@ -75,20 +75,13 @@ KINDS = ("personal", "pre-founder", "memorial", "project", "place", "custom")
 
 WILDHAVEN_RAPPID = "37ad22f5-ed6d-48b1-b8b4-61019f58a42b"
 WILDHAVEN_REPO = "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
-# Location-less legacy form of the wildhaven parent UUID: bare UUID →
-# rappid:parent:<32hex>. A READ-FOREVER legacy shape (door_address.py
-# canonicalizes it to @<owner>/<slug> once the parent's door repo is known);
-# recorded so a freshly-summoned twin's parent_rappid is never a raw UUID.
-WILDHAVEN_PARENT_RAPPID = "rappid:parent:" + WILDHAVEN_RAPPID.replace("-", "")
-
-
-def _rappid_from_uuid(slug, uuid_str):
-    """LEGACY reshaper (migration only): 128-bit UUID → bare rappid:<slug>:<32hex>,
-    entropy preserved. This is a read-forever / canonicalized legacy form, NOT the
-    emitted mint — fresh twins mint the consolidated Eternity content-address via
-    `_eternity_rappid`. Kept for lossless migration of pre-Eternity UUID twins.
-    """
-    return "rappid:%s:%s" % (slug, uuid_str.replace("-", ""))
+# The wildhaven parent, canonicalized to the consolidated Eternity form
+# rappid:@<owner>/<slug>:<hash> (door_address.py canonicalize_rappid): the
+# @<owner>/<slug> envelope locates the parent's door repo; the hash is the
+# wildhaven UUID preserved verbatim (identity is never re-minted). Recorded so a
+# freshly-summoned twin's parent_rappid is the self-locating canonical form,
+# never a raw UUID or a bare slug.
+WILDHAVEN_PARENT_RAPPID = "rappid:@kody-w/wildhaven-ai-homes-twin:" + WILDHAVEN_RAPPID.replace("-", "")
 
 
 def _operator_owner(kwargs=None):
