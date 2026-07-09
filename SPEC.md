@@ -9,7 +9,7 @@
 
 This is the **organism spec**. The companion document is the [rappterbox console spec](https://github.com/kody-w/rappterbox/blob/main/SPEC.md), which defines the runtime that hosts twins. Twins live; consoles are substrate.
 
-> **v2.0 is the identity upgrade.** The `rappid` is no longer a UUIDv4 — it is the self-locating, self-verifying **Eternity** content-address `rappid:@<owner>/<slug>:<64hex>` (SHA-256 of `<owner>/<slug>`; kind lives in the record, not the string; CONSTITUTION Art. XXXIV.1, locked 2026-06-03). The earlier bare `rappid:<birth-slug>:<64hex>` shape is now **Legacy** — read-forever, canonicalized on read, never emitted. Sections §3–§6 and §9–§10 are unchanged in substance (only `rappid_uuid` references were renamed). §2 (identity), §7 (egg), §8 (hub) were rewritten. §11 (the single-file `.html` twin) and §12 (No PII / secrets) are new. Legacy UUID twins migrate losslessly — see §2.
+> **v2.0 is the identity upgrade.** The `rappid` is no longer a UUIDv4 string — it is the self-locating **Eternity** identity `rappid:@<owner>/<slug>:<64hex>`, where the `<64hex>` is a **keyless content-address** — the full SHA-256 of the record's canonical content (`rapp-eternity/1.0` §1.3; equivalently a stable UUID/commit-derived hash per CONSTITUTION Art. XXXVI.1), **independent of the slug** and **never** `sha256('<owner>/<slug>')`. `kind` lives in the record, not the string; CONSTITUTION Art. XXXIV.1, locked 2026-06-03. The earlier bare `rappid:<birth-slug>:<64hex>` shape is now **Legacy** — read-forever, canonicalized on read, never emitted. Sections §3–§6 and §9–§10 are unchanged in substance (only `rappid_uuid` references were renamed). §2 (identity), §7 (egg), §8 (hub) were rewritten. §11 (the single-file `.html` twin) and §12 (No PII / secrets) are new. Legacy UUID twins migrate losslessly — see §2.
 
 ---
 
@@ -39,7 +39,7 @@ The twin runs on a brainstem (the runtime). The brainstem is mortal — it's the
 ## 2. The rappid (identity)
 
 ```json
-"rappid": "rappid:@kody-w/grandma-rose:bda123af507211a7eb367078e867825241580661384b3cc9abeab4e776e2daff"
+"rappid": "rappid:@kody-w/grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e6f1a9c3b8d2e5470a1b9c8d7e6f504132"
 ```
 
 The rappid is a **self-verifying, hash-derived identity string**. It supersedes the v1.0 UUIDv4 entirely.
@@ -53,7 +53,7 @@ rappid:@<owner>/<slug>:<64hex>
 This is the **Eternity** form — the single string producers emit (CONSTITUTION Art. XXXIV.1, locked 2026-06-03). It is BOTH identity and self-locating:
 
 - **`@<owner>/<slug>`** — the **canonical location**. `github.com/<owner>/<slug>` is the door; every door URL derives from it by string parsing (no lookup, no API). The slug never changes after birth, even if the twin's `display_name` later changes.
-- **`<64hex>`** — the **full SHA-256 digest of `<owner>/<slug>`**, 256-bit, **NEVER truncated**. A PKI-free **content-address**: anyone can recompute `sha256("<owner>/<slug>")` and confirm the identity — **no key required**. It is the authoritative value for matching, dedup, and equality, and carries 2^128 birthday resistance even in a post-Grover world.
+- **`<64hex>`** — a **keyless identity hash**, 256-bit, **NEVER truncated**: the full SHA-256 of the record's canonical content (`rapp-eternity/1.0` §1.3; equivalently a stable UUID/commit-derived mint per CONSTITUTION Art. XXXVI.1), **computed independent of the slug** — it is **never** `sha256('<owner>/<slug>')`. The hash is the **sole join key** for matching, dedup, and equality (SPEC.md §2: "never the slug"); no key is required for it to exist or match. Carries 2^128 birthday resistance even in a post-Grover world.
 - **`kind`** and all other structure live in the **`rappid.json` RECORD**, not the string.
 
 The hash is authoritative; `@<owner>/<slug>` locates. When the two ever disagree (e.g. a hand-edited file), the hash wins and the record is malformed.
@@ -62,7 +62,7 @@ The hash is authoritative; `@<owner>/<slug>` locates. When the two ever disagree
 
 ### Derivation (optional bloodline scheme)
 
-The **canonical identity** hash is the content-address `sha256("<owner>/<slug>")` (see *Canonical form*) — **no key, no lineage input**. Independently, a lineage MAY keep an **OPTIONAL** deterministic *bloodline* hash for private germline bookkeeping, derived from the parent, a private lineage key, and the birth name with `0x00` byte separators:
+The **canonical identity** hash is the keyless content-address defined in *Canonical form* — the SHA-256 of the record's canonical content (`rapp-eternity/1.0` §1.3), **independent of the slug and of any key**, **never** `sha256('<owner>/<slug>')`. Independently, a lineage MAY keep an **OPTIONAL** deterministic *bloodline* hash for private germline bookkeeping, derived from the parent, a private lineage key, and the birth name with `0x00` byte separators:
 
 ```
 child_hash   = sha256( parent_rappid  ‖ 0x00 ‖ lineage_key ‖ 0x00 ‖ name_slot )
@@ -145,7 +145,7 @@ The **`sig_suite` tag is migratable** without ever touching the identity. A twin
 ### Properties
 
 - **Permanent** — the `rappid` is minted exactly once at first hatch and never regenerated. It survives substrate hops, kernel updates, ownership transfers, and decades of egg roundtrips.
-- **Self-verifying** — anyone recomputes `sha256("<owner>/<slug>")` from the location. No key and no central registry required for verification.
+- **Self-verifying** — the hash is a keyless identity (SHA-256 of the record's canonical content per `rapp-eternity/1.0`), independent of the slug; a reader matches on the hash alone. No key and no central registry required.
 - **Authoritative by hash** — matching, dedup, and equality use the full 64-hex digest, never the slug, never a prefix.
 - **Lineage anchor** — `parent_rappid` is the full canonical rappid of the code ancestor.
 
@@ -507,7 +507,7 @@ The Twin agent (`@kody-w/twin_agent` in RAR, `agents/twin_agent.py` in this hub)
 
 | Action | Semantics |
 |---|---|
-| `summon` | Birth a fresh twin. Mints the canonical **Eternity** rappid `rappid:@<owner>/<slug>:<64hex>` (`<64hex>` = `sha256("<owner>/<slug>")`; kind in the record, not the string), writes workspace from a soul template (kind). Never emits the bare legacy form. |
+| `summon` | Birth a fresh twin. Mints the canonical **Eternity** rappid `rappid:@<owner>/<slug>:<64hex>` — the `<64hex>` is a keyless identity hash (`sha256` of a fresh UUID per SPEC.md §2.3 / `rapp-eternity/1.0`), **independent of the slug**, never `sha256('<owner>/<slug>')`; kind in the record, not the string — and writes the workspace from a soul template (kind). Never emits the bare legacy form. |
 | `hatch` | Import an existing twin from a `.egg` (local file via `egg_path` OR remote URL via `egg_url`) or from a `.html` twin. sha256-verifies if expected hash known. Re-anchors legacy UUID identities once (§2). |
 | `boot` | Start the twin as its own brainstem on a fresh port (auto-allocates 7081–7200). Returns the chat URL. |
 | `stop` | SIGTERM a running twin; clean up pid/port files. |
@@ -727,7 +727,7 @@ A twin egg ships hub-compliant when ALL of the following are true:
 
 ### Identity
 - [ ] `rappid.json` has a valid canonical Eternity `rappid` (`rappid:@<owner>/<slug>:<64hex>`, full untruncated 64 lowercase hex)
-- [ ] `<64hex>` equals `sha256("<owner>/<slug>")` and `<slug>` equals the record `name` (self-verifying content-address)
+- [ ] `<64hex>` is a keyless identity hash (SHA-256 of the record's canonical content / a UUID-derived mint per `rapp-eternity/1.0`), **independent of the slug** — NOT `sha256('<owner>/<slug>')`; `<slug>` equals the record `name`
 - [ ] `parent_rappid` set as a full canonical rappid; chain walks back to the rapp species root
 - [ ] Single-parent rule honored — `parent_rappid` is the actual code-ancestor
 - [ ] NO version tag in the rappid string (no `rappid:v4:…`)
