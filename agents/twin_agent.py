@@ -31,6 +31,7 @@ as plain English to the LLM.
 """
 
 import hashlib
+import uuid
 import io
 import json
 import os
@@ -96,15 +97,18 @@ def _operator_owner(kwargs=None):
 
 
 def _eternity_rappid(owner, slug):
-    """Mint the consolidated Eternity rappid (CONSTITUTION Art. XXXIV.1, locked
-    2026-06-03): rappid:@<owner>/<slug>:<64hex> where <64hex> = sha256("<owner>/<slug>").
-    A PKI-free, self-locating content-address — `kind` lives in the rappid.json
-    RECORD, not the string. Deterministic: the same @<owner>/<slug> always yields
-    the same identity. This is the ONLY form producers emit; the bare
-    rappid:<slug>:<hex> shape is read-only legacy, never emitted.
+    """Mint the consolidated Eternity rappid (CONSTITUTION Art. XXXIV.1/XXXVI.1,
+    locked 2026-06-03): rappid:@<owner>/<slug>:<64hex>. The 64hex is a keyless,
+    stable identity hash — sha256 of a fresh UUID (per SPEC.md §2.3; keyless
+    organisms use a stable UUID/commit-derived hash) — computed **independent of
+    the slug**. It is NEVER sha256("<owner>/<slug>"): the slug is display /
+    location sugar, and the hash is the sole join key (SPEC.md §2 "never the
+    slug"). `@<owner>/<slug>` locates the door; `kind` lives in the rappid.json
+    RECORD, not the string. Minted once, read forever; the bare rappid:<slug>:<hex>
+    shape is read-only legacy, never emitted.
     """
-    loc = "%s/%s" % (owner, slug)
-    return "rappid:@%s/%s:%s" % (owner, slug, hashlib.sha256(loc.encode("utf-8")).hexdigest())
+    identity_hash = hashlib.sha256(uuid.uuid4().bytes).hexdigest()
+    return "rappid:@%s/%s:%s" % (owner, slug, identity_hash)
 
 
 def _ws_name(rappid):
@@ -1120,7 +1124,7 @@ class TwinAgent(BasicAgent):
                 "kind": kind,
                 "description": description or "",
                 "hash_bits": 256,
-                "_note_hash": "Native 256-bit Eternity content-address: sha256('<owner>/<slug>'). Kind lives in this record, not the string.",
+                "_note_hash": "Native 256-bit keyless Eternity identity hash: sha256 of a fresh UUID (independent of the slug; the hash is the sole join key, never sha256('<owner>/<slug>')). Kind lives in this record, not the string.",
                 "_summoned_by": "@kody-w/twin_agent",
             }, indent=2) + "\n")
             (workspace / "agents").mkdir()
