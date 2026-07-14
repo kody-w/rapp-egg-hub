@@ -19,7 +19,7 @@ That's the whole flow for most people: **open → Get → drag → done.**
 
 ## Identity: the rappid (a twin's DNA)
 
-Every twin carries a permanent name written like `rappid:<birth-slug>:<64hex>` — for example `rappid:grandma-rose:0d51f2b3…` (64 hex characters). It is **readable** (the birth-slug is the twin's immutable gene name, so you know who it is at a glance, no lookup), **permanent** (the 64-hex full SHA-256 is the authoritative fingerprint — never truncated, never re-versioned), and built to be **ownership-provable** (the record reserves keypair-binding fields so a twin can one day prove who keeps it by signing a challenge, and a line can survive its operator through signed key succession). The identity hash never changes — new capabilities are added as optional fields in the `rappid.json` record, never baked into the string.
+Every twin carries a permanent owner-scoped Eternity name written like `rappid:@<owner>/<slug>:<64hex>` — for example `rappid:@example-owner/example-twin:0d51f2b3…` (64 hex characters). The earlier bare-slug shape `rappid:<birth-slug>:<64hex>` is **legacy, read forever, never re-emitted**. The canonical form is **readable** (the slug is the twin's immutable gene name, so you know who it is at a glance, no lookup), **permanent** (the 64-hex full SHA-256 is the authoritative fingerprint — never truncated, never re-versioned), and built to be **ownership-provable** (the record reserves keypair-binding fields so a twin can one day prove who keeps it by signing a challenge, and a line can survive its operator through signed key succession). The identity hash never changes — new capabilities are added as optional fields in the `rappid.json` record, never baked into the string.
 
 ## The one hard rule: no PII
 
