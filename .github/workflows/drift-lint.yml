@@ -1,0 +1,6 @@
+name: Drift lint
+on: [push, pull_request]
+permissions: { contents: read }
+jobs:
+  drift-lint:
+    uses: kody-w/rapp-drift-lint/.github/workflows/drift-lint-reusable.yml@main
