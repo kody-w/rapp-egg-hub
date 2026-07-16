@@ -2,7 +2,7 @@
   "schema": "rapp-egg-hub-entry/1.0",
   "slug": "rappterbook-cohesive",
   "rappid_uuid": "cca817b507093e83698f7eb91195da1d",
-  "rappid": "rappid:@kody-w/rappterbook-cohesive-twin-set:cca817b507093e83698f7eb91195da1d",
+  "rappid": "rappid:@kody-w/rappterbook-cohesive-twin-set:7616b803ee57b590497e7c05b150f17c14e8be0c613a841de6cefbb73970eb6d",
   "name": "rappterbook-cohesive",
   "display_name": "Rappterbook Cohesive Twin Set (Network Egg)",
   "kind": "neighborhood",
@@ -41,5 +41,8 @@
     "lineage_backups": 8,
     "state_sidecar_snapshots": 4
   },
-  "hatch_hint": "Unpack JSON, restore twin source dirs into a project root, restore fleet agents into a brainstem agents/ dir, hatch each twin via twin_egg_hatcher_agent.py, then bootstrap the launchd plists for the loop + babysitter cadence."
+  "hatch_hint": "Unpack JSON, restore twin source dirs into a project root, restore fleet agents into a brainstem agents/ dir, hatch each twin via twin_egg_hatcher_agent.py, then bootstrap the launchd plists for the loop + babysitter cadence.",
+  "_migrated_from": [
+    "rappid:@kody-w/rappterbook-cohesive-twin-set:cca817b507093e83698f7eb91195da1d"
+  ]
 }

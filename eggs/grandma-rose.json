@@ -24,6 +24,9 @@
   },
   "memory_facts_count": 3,
   "_note": "First egg in the hub \u2014 the seed that demonstrates the format.",
-  "rappid": "rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e",
-  "haiku": ""
+  "rappid": "rappid:@kody-w/grandma-rose:0b49e4e7136241f5ce1214b21ac1c769549d0466124e7221f4fba053894ff081",
+  "haiku": "",
+  "_migrated_from": [
+    "rappid:grandma-rose:0d51f2b37c2c4f9a8e5b7f0c92ab4d7e"
+  ]
 }

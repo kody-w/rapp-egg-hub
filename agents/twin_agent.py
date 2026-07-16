@@ -74,7 +74,7 @@ ACTIONS = (
 )
 KINDS = ("personal", "pre-founder", "memorial", "project", "place", "custom")
 
-WILDHAVEN_RAPPID = "37ad22f5-ed6d-48b1-b8b4-61019f58a42b"
+WILDHAVEN_RAPPID = "rappid:@kody-w/wildhaven-ai-homes-twin:df9c3f1f4b09d000720e93be4248d44213025ba5f76bf1180dc5d1ba0b0efd36"
 WILDHAVEN_REPO = "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
 # The wildhaven parent, canonicalized to the consolidated Eternity form
 # rappid:@<owner>/<slug>:<hash> (door_address.py canonicalize_rappid): the
@@ -107,7 +107,7 @@ def _eternity_rappid(owner, slug):
     RECORD, not the string. Minted once, read forever; the bare rappid:<slug>:<hex>
     shape is read-only legacy, never emitted.
     """
-    identity_hash = hashlib.sha256(uuid.uuid4().bytes).hexdigest()
+    identity_hash = hashlib.sha256(b"rapp/1:rappid\n" + uuid.uuid4().bytes).hexdigest()  # §6.2 domain-separated
     return "rappid:@%s/%s:%s" % (owner, slug, identity_hash)
 
 
@@ -1112,7 +1112,7 @@ class TwinAgent(BasicAgent):
         try:
             (workspace / "soul.md").write_text(SOUL_TEMPLATES[kind](twin_name, description))
             (workspace / "rappid.json").write_text(json.dumps({
-                "schema": "rapp-rappid/2.0",
+                "schema": "rapp/1",
                 "rappid": rappid,
                 "parent_rappid": WILDHAVEN_PARENT_RAPPID,
                 "parent_repo": WILDHAVEN_REPO,

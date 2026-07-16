@@ -26,6 +26,9 @@
   },
   "memory_facts_count": 8,
   "_note": "CEO seat-as-twin. Pairs with the brand-voice wildhaven-ai-homes-twin variant. Private companion: kody-w/wildhaven-ceo.",
-  "rappid": "rappid:wildhaven-ceo:8c3e91d4bfa14f6ab2d715a8e7c4d3f9",
-  "haiku": ""
+  "rappid": "rappid:@kody-w/wildhaven-ceo:7fb60c5a284a58544394bc9cb69be7f96dd91ec4502435f33c0c69e4be570220",
+  "haiku": "",
+  "_migrated_from": [
+    "rappid:wildhaven-ceo:8c3e91d4bfa14f6ab2d715a8e7c4d3f9"
+  ]
 }

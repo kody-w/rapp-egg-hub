@@ -27,6 +27,9 @@
   },
   "memory_facts_count": 8,
   "_note": "Slug = GitHub handle (@kody-w). Display name = Kody Wildfeuer. Public sources only.",
-  "rappid": "rappid:kody-w:1b5e7aa92c464cd89f1f0e3b62fc5e8f",
-  "haiku": ""
+  "rappid": "rappid:@kody-w/kody-w:411b4dc89406119b0909623805bdb3ea3e050130c3329ae2ef06c34701013398",
+  "haiku": "",
+  "_migrated_from": [
+    "rappid:kody-w:1b5e7aa92c464cd89f1f0e3b62fc5e8f"
+  ]
 }

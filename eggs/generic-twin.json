@@ -1,7 +1,7 @@
 {
   "schema": "rapp-egg-hub-entry/2.0",
   "slug": "generic-twin",
-  "rappid": "rappid:@kody-w/generic-twin:9b1c7f4a2d6e8053c14b9f70a8e2d135",
+  "rappid": "rappid:@kody-w/generic-twin:7035bfb45f3d1e955191e6f907f73f09653c2d88746200ae2a5ea2eae26ccc6e",
   "name": "generic-twin",
   "display_name": "Generic Twin",
   "kind": "personal",
@@ -28,5 +28,8 @@
   "pii_stripped": true,
   "generic": true,
   "flavor": "full",
-  "github": "https://github.com/kody-w"
+  "github": "https://github.com/kody-w",
+  "_migrated_from": [
+    "rappid:@kody-w/generic-twin:9b1c7f4a2d6e8053c14b9f70a8e2d135"
+  ]
 }

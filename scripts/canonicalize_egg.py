@@ -93,7 +93,7 @@ def migrate_record(rj):
                           ("birth_attestation", None), ("key_succession", []),
                           ("registry_anchor", None)):
         rj.setdefault(fld, default)
-    rj["schema"] = "rapp-rappid/2.0"
+    rj["schema"] = "rapp/1"
     return notes
 
 

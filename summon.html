@@ -7082,7 +7082,7 @@ async function exportTwinEgg() {
     const now = new Date().toISOString();
     const t = summonedTwin || {};
     const rappid = (t.rappid && Object.keys(t.rappid).length) ? t.rappid : {
-      schema: 'rapp-rappid/1.1',
+      schema: 'rapp/1',
       rappid: 'local-' + Math.random().toString(36).slice(2, 10),
       name: t.name || 'twin',
       display_name: t.display_name || 'Twin',
