@@ -5,7 +5,7 @@
   "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-06-08T17:49:01Z",
+  "updated_at": "2026-07-16T03:41:11Z",
   "egg_count": 5,
   "eggs": [
     {
@@ -105,8 +105,8 @@
     {
       "schema": "rapp-egg-hub-entry/2.0",
       "slug": "rappterbook-cohesive",
-      "rappid": "rappid:@kody-w/rappterbook-cohesive-twin-set:cca817b507093e83698f7eb91195da1d",
-      "hash_bits": 128,
+      "rappid": "rappid:@kody-w/rappterbook-cohesive-twin-set:7616b803ee57b590497e7c05b150f17c14e8be0c613a841de6cefbb73970eb6d",
+      "hash_bits": 256,
       "name": "rappterbook-cohesive",
       "display_name": "Rappterbook Cohesive Twin Set (Network Egg)",
       "kind": "neighborhood",
