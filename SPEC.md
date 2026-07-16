@@ -684,7 +684,7 @@ Cartridges, eggs, and twins authored against any 1.x or 2.x version of these sch
 ### 14.1 The Compatibility & Migration Contract (NORMATIVE)
 
 This is the law that lets the ecosystem evolve without rotting. The old mess came from
-**versioned identity strings** (`rappid:v2:…`, `rappid:v3:…`) — producers kept inventing formats
+**versioned identity strings** (`rappid:v2:…`, `rappid:v3:…` — legacy forms, read-forever but never written) — producers kept inventing formats
 and consumers couldn't read them all. The contract makes that impossible by separating who reads
 from who writes. Every RAPP component — the brainstem, hatchers, `rapp-god`, lineage walkers,
 egg packers, the `.html` baker — MUST obey it.
