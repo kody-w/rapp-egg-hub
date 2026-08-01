@@ -1,0 +1,39 @@
+{
+  "schema": "rapp-egg-hub-entry/2.0",
+  "slug": "rock-tumbler",
+  "rappid": "rappid:@kody-w/rock-tumbler:933e7eaaa4111bc9b1285b382780102718d07b87c3ada322d2ea3a2a85c28504",
+  "hash_bits": 256,
+  "name": "rock-tumbler",
+  "display_name": "Rock Tumbler",
+  "kind": "method",
+  "haiku": "ten agents said done / the histogram disagreed / open the file",
+  "description": "A method twin, not a person twin. Rock Tumbler is the harsh-critic loop from a session where ten ambitious single-file browser apps were built by fanning out sub-agents and then verified independently in a real headless Chromium. Nine of the ten reported success while still broken. It ships soul.md (the 7-step loop plus the diagnostic patterns) and a runnable BrowserCritic agent that serves over HTTP, launches Chromium with GPU flags, captures every pageerror, drives the UI, screenshots it, and hands back a number instead of an adjective.",
+  "tags": [
+    "method",
+    "verification",
+    "critic",
+    "adversarial",
+    "memory-equipped"
+  ],
+  "egg_schema": "brainstem-egg/2.1",
+  "size_bytes": 20321,
+  "sha256": "4e4f5c0bd7e65e08634e72c9af25df4f6fab61ba572e69f326d39e0a6e9facff",
+  "packed_by": "@kody-w",
+  "packed_at": "2026-08-01T18:40:55Z",
+  "twin_html": "twins/rock-tumbler.html",
+  "twin_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/twins/rock-tumbler.html",
+  "egg_path": "eggs/rock-tumbler.egg",
+  "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/rock-tumbler.egg",
+  "lineage": {
+    "parent_rappid": "rappid:@rapp/origin:0b635450c04249fbb4b1bdb571044dec",
+    "parent_repo": null
+  },
+  "_note": "Method twin, not a person twin. Minted from a session that shipped 10 single-file apps benchmarked against named commercial products; 9 of 10 builder self-reports were wrong. Ships BrowserCritic + AdversarialCritic alongside the standard memory cartridges.",
+  "memory_facts_count": 23,
+  "pubkey": "",
+  "sig_suite": "none",
+  "registry_anchor": null,
+  "_migrated_from": [
+    "rappid:@kody-w/rock-tumbler:7c4e19a6b8d35f20e94a1c6d8b3f5027"
+  ]
+}
