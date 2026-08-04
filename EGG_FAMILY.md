@@ -206,7 +206,7 @@ rappid:@owner/slug:<64hex>
 - The **`<64hex>` SHA-256 digest is the identity** — the universal join key for equality, dedup, and lineage-walk. Never truncated, never the slug.
 - **PKI-free.** Identity is a content-address (a hash), not a signature. Possession of the egg is *not* a claim of ownership; ownership is a **separate, OPTIONAL** layer.
 - **Keypair binding is RESERVED and OPTIONAL.** The manifest's `pubkey`/`sig_suite`/`birth_attestation` may stay empty forever and the egg is still fully conformant. No hatcher, packer, registry, or hub gate may **require** a keypair to accept or hatch an egg. (This is the resolved eternity ground truth — sha256 identity is mandatory and PKI-free; keypair sovereignty is opt-in, never required.)
-- The estate's eternity standard (`rapp-moment/1.0` / `rapp-eternity/1.0`) defines the owner-qualified form `rappid:@owner/slug:<64hex>` as the **sole canonical identity**, and a packer **emits only** that form. The legacy owner-less form `rappid:<slug>:<64hex>` is **read-accepted but never emitted** — a hatcher accepts both (Postel, §7) and **the hash is the join key either way**, never rewriting one into the other in transit.
+- The owner-qualified form `rappid:@owner/slug:<64hex>` is the **sole canonical identity**, and a packer **emits only** that form. (This form is one of the few things unchanged across the estate's identity transition: it was defined by the former `rapp-eternity/1.0` — **retired to a non-normative tombstone on 2026-07-17** — and RAPP/1 §6.1 preserves the same string shape. See the conflict note in §4.2 for what did *not* survive that transition.) The legacy owner-less form `rappid:<slug>:<64hex>` is **read-accepted but never emitted** — a hatcher accepts both (Postel, §7) and **the hash is the join key either way**, never rewriting one into the other in transit.
 
 ### 4.2 The 128-bit → 64hex migration debt (LIVE)
 
@@ -218,6 +218,27 @@ The contract for this debt (consistent with `SPEC.md` §2 "lossless one-time re-
 2. **New eggs mint 64hex/256-bit.** Any egg packed under `brainstem-egg/2.3` for a *newly born* organism carries a full 64-hex rappid and `hash_bits: 256`.
 3. **The hatcher re-anchors string shape once, in place.** On hatching a legacy egg, the hatcher canonicalizes the *string* (strip dashes, prefix the slug) around the **same underlying hash**, records `_migrated_from`, and never churns again (§5, §7). Bits unchanged → lineage stays walkable.
 4. **Debt is discharged by re-packing, not by editing.** When a grandfathered twin is next *born again* (a fresh `summon`, not a `hatch`), it mints 256-bit. There is no flag day; the hub converges as organisms are re-minted.
+
+> **⚠ NON-NORMATIVE CONFLICT NOTE (recorded 2026-08-04 — this note changes none of the four rules above).**
+>
+> The authority this contract was written against, `rapp-eternity/1.0`, was **retired to a non-normative tombstone on 2026-07-17** ("normative words in the historical version have no present authority"). Identity now lives in **RAPP/1 §6** at [`kody-w/rapp-1@6723c7a`](https://github.com/kody-w/rapp-1/blob/6723c7add2aed36bb68992fc71a56b0a4bd5ad81/SPEC.md), SHA-256 `6d06daba65d7c045716f3d6e95db8401ab58e727820e4114466d847f62cae49b` (verified byte-for-byte, 41880 bytes).
+>
+> **RAPP §6.3 reaches the opposite conclusion on three of the four rules above** — so discharging this debt exactly as written would not resolve it under RAPP:
+>
+> | This §4.2 | RAPP/1 §6.3 (and §12) |
+> |---|---|
+> | **1.** "Never re-mint … Grandfathered eggs keep their 128-bit hash" | "The one-time owner-authorized 128→256-bit re-anchor **mints a fresh 64-hex**, records the old id in `_migrated_from`, and is **the only way** a provisional identity becomes usable." |
+> | **3.** canonicalize the *string* only; "Bits unchanged" | A tail "not exactly 64 lowercase hex (e.g. a legacy 32-hex tail) is **provisional**: it exists only inside the reading process and **MUST NOT** appear in any emitted frame, `stream_id`, **egg**, or registry entry." |
+> | **1./3.** "the record stamps `hash_bits: 128` and `_migrated_from`" | "**A re-anchor is valid only with a verifiable authorization** — a self-asserted `_migrated_from` is insufficient (it would let anyone hijack an identity)." It **MUST** be an owner-signed §13.3 record `{old_rappid, new_rappid, case, utc, sig, old_key_sig?}`, here `case:"upgrade"`. |
+> | **4.** "There is no flag day; the hub converges as organisms are re-minted" | §12: "there is **no perpetual backward compatibility** (Art. III): a change to a canonical form is a **total migration** of every instance + **deletion** of the old form." |
+>
+> Rule **2** is the one that survives unchanged — new eggs minting at 256-bit is compatible with RAPP §6.2.
+>
+> RAPP §6.3 is not simply stricter; it resolves the same tension differently. §4.2's reasoning — that fabricating 64 hex from a 128-bit UUID invents a *new* identity and breaks "minted once, never regenerated" — is sound, and under `rapp-eternity/1.0` it was the right call. RAPP §6.3 instead makes the fresh mint **authorized and recorded**, so continuity comes from the signed re-anchor record rather than from hash preservation.
+>
+> **This repo has never declared RAPP/1 conformance**, so §6.3 does not govern it automatically, and the choice is a deliberate design decision rather than an inherited one: **(a)** migrate the affected identities under RAPP §6.3(a) with signed §13.3 `case:"upgrade"` records, or **(b)** declare `rapp-rappid-spec/2.0` deliberately divergent from RAPP §6 and state that here. Both are defensible. **The decision is open and tracked in [#15](https://github.com/kody-w/rapp-egg-hub/issues/15); until it is made, the four rules above remain in force for this repository.**
+>
+> **Live status (verified 2026-08-04):** 5 of 7 identities in `index.json` are not 64-hex — `@kody-w/generic-twin` (32-hex), `@rapp/origin` (32-hex, as `parent_rappid`), and the bare-slug `grandma-rose`, `kody-w`, `wildhaven-ceo`. Two conform fully: `@kody-w/rappterbook-cohesive-twin-set` and `@kody-w/rock-tumbler`. The debt recorded above is therefore still live, 37 days after it was written down.
 
 ---
 
