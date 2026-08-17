@@ -5,7 +5,7 @@
   "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-08-01T18:43:01Z",
+  "updated_at": "2026-08-17T00:31:13Z",
   "egg_count": 6,
   "eggs": [
     {
@@ -180,7 +180,7 @@
       "display_name": "The Wildhaven CEO",
       "kind": "pre-founder",
       "haiku": "",
-      "description": "Public-facing CEO twin of Wildhaven AI Homes. The brand's executive voice in public, pre-founding. Authenticated collaborators with read access to kody-w/wildhaven-ceo pull richer context (board minutes, strategy docs, IP roadmap) at runtime; anonymous visitors get the public manifesto voice. Bundles standard memory cartridges.",
+      "description": "Public-facing CEO twin of Wildhaven AI Homes. The brand's executive voice in public, pre-founding. Depth of context scales with the chatter's authorization: authenticated collaborators pull richer context at runtime; anonymous visitors get the public manifesto voice. Bundles standard memory cartridges.",
       "tags": [
         "pre-founder",
         "ceo",
@@ -189,8 +189,8 @@
         "memory-equipped"
       ],
       "egg_schema": "brainstem-egg/2.1",
-      "size_bytes": 10074,
-      "sha256": "880afed96a2cb491bc07dfa4e59d07af17dbba421cff2f8cacfd36b1bc3a5da5",
+      "size_bytes": 9972,
+      "sha256": "c6c667e7bb60324d12127866521a4ca1270828508aed86a416879ace324c6674",
       "packed_by": "@kody-w",
       "packed_at": "2026-05-04T17:24:27Z",
       "twin_html": "twins/wildhaven-ceo.html",
