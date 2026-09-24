@@ -5,8 +5,8 @@
   "description": "Public hub for digital twins. Each twin ships as a single-file .html (open in a browser, click Get, drop the agent into your RAPP brainstem) with the raw .egg also available for the Twin agent.",
   "homepage": "https://kody-w.github.io/rapp-egg-hub/",
   "raw_base": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main",
-  "updated_at": "2026-08-17T00:31:56Z",
-  "egg_count": 6,
+  "updated_at": "2026-09-24T01:58:41Z",
+  "egg_count": 7,
   "eggs": [
     {
       "schema": "rapp-egg-hub-entry/2.0",
@@ -68,6 +68,37 @@
       "lineage": {
         "parent_rappid": "37ad22f5-ed6d-48b1-b8b4-61019f58a42b",
         "parent_repo": "https://github.com/kody-w/wildhaven-ai-homes-twin.git"
+      }
+    },
+    {
+      "schema": "rapp-egg-hub-entry/2.0",
+      "slug": "invoice-desk",
+      "rappid": "rappid:@kody-w/invoice-desk:eac8871c654714b111d0847118fbf6b7fcca183fec17e376ce9741e419b42c1e",
+      "hash_bits": 256,
+      "name": "invoice-desk",
+      "display_name": "Invoice Desk",
+      "kind": "template",
+      "haiku": "",
+      "description": "Example template brainstem: a brisk accounts-payable assistant that routes invoices with its InvoiceRouter agent (over $10,000 goes to approval). A rapp/1 organism egg: soul and agents only, no memory, no engine code. Hatch with brainfreeze: python3 -m brainfreeze up --egg <raw_url>.",
+      "tags": [
+        "template",
+        "rapp1-organism",
+        "brainfreeze",
+        "accounts-payable",
+        "example"
+      ],
+      "egg_schema": "rapp/1-egg",
+      "size_bytes": 7016,
+      "sha256": "e4b76cd3209c48159c3daf1c156350c6e10fe78db986a4c6e639211d0453b0ec",
+      "packed_by": "@kody-w",
+      "packed_at": "2026-09-24T01:13:20.000Z",
+      "twin_html": null,
+      "twin_url": null,
+      "egg_path": "eggs/invoice-desk.egg",
+      "raw_url": "https://raw.githubusercontent.com/kody-w/rapp-egg-hub/main/eggs/invoice-desk.egg",
+      "lineage": {
+        "parent_rappid": null,
+        "parent_repo": null
       }
     },
     {
