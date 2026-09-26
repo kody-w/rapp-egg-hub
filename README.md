@@ -1,5 +1,9 @@
 # rapp-egg-hub
 
+<!-- rapp1:network-header:start -->
+[![RAPP/1](https://kody-w.github.io/rapp-hive-public/portfolio/badges/rapp-egg-hub.svg)](https://github.com/kody-w/rapp-hive-public/blob/main/portfolio/repos/rapp-egg-hub.md) · **New to RAPP?** [Start here: get your Brainstem →](https://github.com/kody-w/rapp-installer#start-here)
+<!-- rapp1:network-header:end -->
+
 > **A public hub for digital twins you can hold in your hand.** Open a twin in your browser, click **Get**, drag the downloaded agent into your RAPP brainstem — and the twin is now yours, living locally, in about 30 seconds.
 
 A twin is a portable being: a `rappid.json` (its identity + lineage), a `soul.md` (its voice), conversation memory, and any mutations its keeper made. This hub now ships every twin as a **single-file `.html`** — the primary way normal people get and trade twins — with the raw `.egg` cartridge kept alongside for the Twin agent.
